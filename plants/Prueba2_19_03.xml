@@ -1,0 +1,219 @@
+<mujoco model="xgo">
+  <compiler angle="radian"/>
+  <option gravity="0 0 -9.81" timestep="0.002" iterations="100"/>
+
+  <default>
+    <joint damping="2.0" armature="0.01"/>
+    <geom contype="0" conaffinity="0"/>
+    <position kp="40" forcerange="-25 25" ctrlrange="-1.57 1.57"/>
+  </default>
+
+  <asset>
+    <mesh name="base_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/base_link.STL"/>
+    <mesh name="lf_hip_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/lf_hip_link.STL"/>
+    <mesh name="lf_upper_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/lf_upper_leg_link.STL"/>
+    <mesh name="lf_lower_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/lf_lower_leg_link.STL"/>
+    <mesh name="rf_hip_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/rf_hip_link.STL"/>
+    <mesh name="rf_upper_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/rf_upper_leg_link.STL"/>
+    <mesh name="rf_lower_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/rf_lower_leg_link.STL"/>
+    <mesh name="lh_hip_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/lh_hip_link.STL"/>
+    <mesh name="lh_upper_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/lh_upper_leg_link.STL"/>
+    <mesh name="lh_lower_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/lh_lower_leg_link.STL"/>
+    <mesh name="rh_hip_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/rh_hip_link.STL"/>
+    <mesh name="rh_upper_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/rh_upper_leg_link.STL"/>
+    <mesh name="rh_lower_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/rh_lower_leg_link.STL"/>
+    <mesh name="camera_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/camera_link.STL"/>
+    <mesh name="laser_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/laser_link.STL"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor"
+          type="plane"
+          pos="0 0 0"
+          size="5 5 0.1"
+          rgba="1 1 1 1"
+          contype="1"
+          conaffinity="1"
+          friction="2.0 0.5 0.5"/>
+
+    <body name="base" pos="0 0 0.108">
+      <freejoint/>
+
+      <!-- inercia aproximada para debug -->
+      <inertial pos="0 0 0.02"
+                mass="0.8"
+                diaginertia="0.003 0.008 0.009"/>
+
+      <!-- visual -->
+      <geom pos="0 0 0.01" quat="1 0 0 0" type="mesh" rgba="0.529412 0.54902 0.54902 1" mesh="base_link"/>
+      <geom pos="0.075751 0 0.069653" type="mesh" rgba="0.054902 0.054902 0.054902 1" mesh="camera_link"/>
+      <geom pos="-0.016732 4.4164e-05 0.11335" quat="1 0 0 0" type="mesh" rgba="1 1 1 1" mesh="laser_link"/>
+
+      <!-- colisión simple base -->
+      <geom type="box" pos="0.02 0 0.05" size="0.09 0.04 0.025"
+            rgba="0 0 0 0" contype="1" conaffinity="1"/>
+
+      <!-- LF -->
+      <body name="lf_hip_link" pos="0.09332 0.022407 0.02454">
+        <inertial pos="-0.013972 0.0250894 0.00927329"
+                  quat="0.465985 0.505856 -0.63261 0.356052"
+                  mass="0.0196003"
+                  diaginertia="7.28129e-06 6.03463e-06 3.25491e-06"/>
+        <joint name="lf_hip_joint" axis="-1 0 0" range="-1.57 1.57"/>
+        <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="lf_hip_link"/>
+        <geom type="capsule" fromto="0 0 0 -0.018 0.045 0" size="0.012"
+              rgba="0 0 0 0" contype="1" conaffinity="1"/>
+
+        <body name="lf_upper_leg_link" pos="-0.018325 0.049313 0">
+          <inertial pos="-0.00689428 -0.01867 -0.029948"
+                    mass="0.0123429"
+                    diaginertia="5.47497e-06 4.86024e-06 1.83455e-06"/>
+                    
+          <joint name="lf_upper_leg_joint" axis="0 1 0" range="-1.57 1.57"/>
+          <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="lf_upper_leg_link"/>
+          <geom type="capsule" fromto="0 0 0 0 0 -0.06" size="0.010"
+                rgba="0 0 0 0" contype="1" conaffinity="1"/>
+
+          <body name="lf_lower_leg_link" pos="0 -0.00072 -0.059896">
+            <inertial pos="-0.0167812 -0.018325 -0.0316239"
+                      quat="0.999267 0 0.0382793 0"
+                      mass="0.0226879"
+                      diaginertia="1.41901e-05 1.36483e-05 1.31741e-06"/>
+            <joint name="lf_lower_leg_joint" axis="0 1 0" range="-1.57 1.57"/>
+            <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="lf_lower_leg_link"/>
+            <geom type="capsule" fromto="0 0 0 0 0 -0.085" size="0.010"
+                  rgba="0 0 0 0" contype="1" conaffinity="1"
+                  friction="2.0 0.5 0.1"/>
+
+          </body>
+        </body>
+      </body>
+
+      <!-- RF -->
+      <body name="rf_hip_link" pos="0.09332 -0.022517 0.02454">
+        <inertial pos="-0.013972 -0.0250894 0.00927328"
+                  quat="0.505856 0.465985 -0.356051 0.63261"
+                  mass="0.00980013"
+                  diaginertia="3.64065e-06 3.01731e-06 1.62745e-06"/>
+        <joint name="rf_hip_joint" axis="-1 0 0" range="-1.57 1.57"/>
+        <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="rf_hip_link"/>
+        <geom type="capsule" fromto="0 0 0 -0.018 -0.045 0" size="0.012"
+              rgba="0 0 0 0" contype="1" conaffinity="1"/>
+
+        <body name="rf_upper_leg_link" pos="-0.018325 -0.049313 0">
+          <inertial pos="-0.00689428 0.0187 -0.029948"
+                    mass="0.0123429"
+                    diaginertia="5.47497e-06 4.86024e-06 1.83455e-06"/>
+          <joint name="rf_upper_leg_joint" axis="0 1 0" range="-1.57 1.57"/>
+          <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="rf_upper_leg_link"/>
+          <geom type="capsule" fromto="0 0 0 0 0 -0.06" size="0.010"
+                rgba="0 0 0 0" contype="1" conaffinity="1"/>
+
+          <body name="rf_lower_leg_link" pos="0 0 -0.059896">
+            <inertial pos="-0.0167812 0.018325 -0.0316239"
+                      quat="0.999267 0 0.0382793 0"
+                      mass="0.0226879"
+                      diaginertia="1.41901e-05 1.36483e-05 1.31741e-06"/>
+            <joint name="rf_lower_leg_joint" axis="0 1 0" range="-1.57 1.57"/>
+            <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="rf_lower_leg_link"/>
+            <geom type="capsule" fromto="0 0 0 0 0 -0.085" size="0.010"
+                  rgba="0 0 0 0" contype="1" conaffinity="1"
+                  friction="2.0 0.5 0.1"/>
+          </body>
+        </body>
+      </body>
+
+      <!-- LH -->
+      <body name="lh_hip_link" pos="-0.05668 0.022407 0.02454">
+        <inertial pos="-0.013972 0.0250894 0.00927329"
+                  quat="0.465985 0.505856 -0.63261 0.356052"
+                  mass="0.0196003"
+                  diaginertia="7.28129e-06 6.03463e-06 3.25491e-06"/>
+        <joint name="lh_hip_joint" axis="1 0 0" range="-1.57 1.57"/>
+        <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="lh_hip_link"/>
+        <geom type="capsule" fromto="0 0 0 -0.018 0.045 0" size="0.012"
+              rgba="0 0 0 0" contype="1" conaffinity="1"/>
+
+        <body name="lh_upper_leg_link" pos="-0.018325 0.0493131 0">
+          <inertial pos="-0.00689428 -0.01867 -0.029948"
+                    mass="0.0123429"
+                    diaginertia="5.47497e-06 4.86024e-06 1.83455e-06"/>
+          <joint name="lh_upper_leg_joint" axis="0 1 0" range="-1.57 1.57"/>
+          <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="lh_upper_leg_link"/>
+          <geom type="capsule" fromto="0 0 0 0 0 -0.06" size="0.010"
+                rgba="0 0 0 0" contype="1" conaffinity="1"/>
+
+          <body name="lh_lower_leg_link" pos="0 -0.00072 -0.059896">
+            <inertial pos="-0.0167812 -0.018325 -0.0316239"
+                      quat="0.999267 0 0.0382793 0"
+                      mass="0.0226879"
+                      diaginertia="1.41901e-05 1.36483e-05 1.31741e-06"/>
+            <joint name="lh_lower_leg_joint" axis="0 1 0" range="-1.57 1.57"/>
+            <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="lh_lower_leg_link"/>
+            <geom type="capsule" fromto="0 0 0 0 0 -0.085" size="0.010"
+                  rgba="0 0 0 0" contype="1" conaffinity="1"
+                  friction="2.0 0.5 0.1"/>
+          </body>
+        </body>
+      </body>
+
+      <!-- RH -->
+      <body name="rh_hip_link" pos="-0.05668 -0.022517 0.02454">
+        <inertial pos="-0.013972 -0.0250894 0.00927328"
+                  quat="0.505856 0.465985 -0.356051 0.63261"
+                  mass="0.00980013"
+                  diaginertia="3.64065e-06 3.01731e-06 1.62745e-06"/>
+        <joint name="rh_hip_joint" axis="1 0 0" range="-1.57 1.57"/>
+        <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="rh_hip_link"/>
+        <geom type="capsule" fromto="0 0 0 -0.018 -0.045 0" size="0.012"
+              rgba="0 0 0 0" contype="1" conaffinity="1"/>
+
+        <body name="rh_upper_leg_link" pos="-0.018325 -0.049313 0">
+          <inertial pos="-0.00689428 0.0187 -0.029948"
+                    mass="0.0123429"
+                    diaginertia="5.47497e-06 4.86024e-06 1.83455e-06"/>
+          <joint name="rh_upper_leg_joint" axis="0 1 0" range="-1.57 1.57"/>
+          <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="rh_upper_leg_link"/>
+          <geom type="capsule" fromto="0 0 0 0 0 -0.06" size="0.010"
+                rgba="0 0 0 0" contype="1" conaffinity="1"/>
+
+          <body name="rh_lower_leg_link" pos="0 0 -0.059896">
+            <inertial pos="-0.0167812 0.018325 -0.0316239"
+                      quat="0.999267 0 0.0382793 0"
+                      mass="0.0226879"
+                      diaginertia="1.41901e-05 1.36483e-05 1.31741e-06"/>
+            <joint name="rh_lower_leg_joint" axis="0 1 0" range="-1.57 1.57"/>
+            <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="rh_lower_leg_link"/>
+            <geom type="capsule" fromto="0 0 0 0 0 -0.085" size="0.010"
+                  rgba="0 0 0 0" contype="1" conaffinity="1"
+                  friction="2.0 0.5 0.1"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <position joint="lf_hip_joint" kp="35"/>
+    <position joint="lf_upper_leg_joint" kp="55"/>
+    <position joint="lf_lower_leg_joint" kp="55"/>
+
+    <position joint="rf_hip_joint" kp="35"/>
+    <position joint="rf_upper_leg_joint" kp="55"/>
+    <position joint="rf_lower_leg_joint" kp="55"/>
+
+    <position joint="lh_hip_joint" kp="35"/>
+    <position joint="lh_upper_leg_joint" kp="55"/>
+    <position joint="lh_lower_leg_joint" kp="55"/>
+
+    <position joint="rh_hip_joint" kp="35"/>
+    <position joint="rh_upper_leg_joint" kp="55"/>
+    <position joint="rh_lower_leg_joint" kp="55"/>
+  </actuator>
+
+  <keyframe>
+    <key name="stand"
+         qpos="0 0 0.108 1 0 0 0   0 0.65 -1.10   0 0.65 -1.10   0 0.65 -1.10   0 0.65 -1.10"
+         ctrl="0 0.65 -1.10   0 0.65 -1.10   0 0.65 -1.10   0 0.65 -1.10"/>
+  </keyframe>
+</mujoco>
