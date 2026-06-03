@@ -3,7 +3,7 @@
 Everything here is explained, everything explained is used in the example at the bottom.
 
 ---
-
+0
 ## Part 1: The XML Model
 
 A MuJoCo model is a single `.xml` file (called MJCF) that describes the full physical world: bodies, joints, geometry, actuators, and sensors. MuJoCo reads this file, compiles it into a physics model, and simulates it. You never write physics equations — you describe the system, MuJoCo does the math.
