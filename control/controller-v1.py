@@ -141,5 +141,4 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         ctrl = desired_joint_angles.copy()
 
         
-        if is_walking:
-        
+       #  if is_walking:
