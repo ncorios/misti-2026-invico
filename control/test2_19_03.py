@@ -9,6 +9,7 @@ xml_path = os.path.abspath(xml_path)
 model = mujoco.MjModel.from_xml_path(xml_path)
 data  = mujoco.MjData(model)
 
+
 # ── Initial pose ───────────────────────────────────────────────────────────────
 # Find the keyframe named "stand" in the XML and reset the sim to that pose
 keyframe_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_KEY, "stand")
@@ -115,3 +116,5 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         for _ in range(10):           # integrate 10 physics steps per control cycle
             mujoco.mj_step(model, data)
         viewer.sync()                 # push updated state to the passive viewer
+
+        
