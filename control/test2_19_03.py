@@ -51,11 +51,13 @@ def phase_to_angle(sin_value):
 
 # ── Main simulation loop ───────────────────────────────────────────────────────
 with mujoco.viewer.launch_passive(model, data) as viewer:
-
-    # Record starting X position to measure distance travelled
+    # lock camera onto body 1 (usually the torso/base link)
+    viewer.cam.type = mujoco.mjtCamera.mjCAMERA_TRACKING
+    viewer.cam.trackbodyid = 1  # change to the body index of your robot's base
+    
     x_start = data.qpos[0]
-
     while viewer.is_running():
+        
 
         # Current robot position in world frame
         x_current = data.qpos[0]
