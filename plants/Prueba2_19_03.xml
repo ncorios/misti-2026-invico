@@ -194,21 +194,21 @@
   </worldbody>
 
   <actuator>
-    <position joint="lf_hip_joint" kp="35"/>
-    <position joint="lf_upper_leg_joint" kp="55"/>
-    <position joint="lf_lower_leg_joint" kp="55"/>
+    <motor joint="lf_hip_joint"       gear="1" ctrlrange="-25 25"/>
+    <motor joint="lf_upper_leg_joint" gear="1" ctrlrange="-25 25"/>
+    <motor joint="lf_lower_leg_joint" gear="1" ctrlrange="-25 25"/>
 
-    <position joint="rf_hip_joint" kp="35"/>
-    <position joint="rf_upper_leg_joint" kp="55"/>
-    <position joint="rf_lower_leg_joint" kp="55"/>
+    <motor joint="rf_hip_joint"       gear="1" ctrlrange="-25 25"/>
+    <motor joint="rf_upper_leg_joint" gear="1" ctrlrange="-25 25"/>
+    <motor joint="rf_lower_leg_joint" gear="1" ctrlrange="-25 25"/>
 
-    <position joint="lh_hip_joint" kp="35"/>
-    <position joint="lh_upper_leg_joint" kp="55"/>
-    <position joint="lh_lower_leg_joint" kp="55"/>
+    <motor joint="lh_hip_joint"       gear="1" ctrlrange="-25 25"/>
+    <motor joint="lh_upper_leg_joint" gear="1" ctrlrange="-25 25"/>
+    <motor joint="lh_lower_leg_joint" gear="1" ctrlrange="-25 25"/>
 
-    <position joint="rh_hip_joint" kp="35"/>
-    <position joint="rh_upper_leg_joint" kp="55"/>
-    <position joint="rh_lower_leg_joint" kp="55"/>
+    <motor joint="rh_hip_joint"       gear="1" ctrlrange="-25 25"/>
+    <motor joint="rh_upper_leg_joint" gear="1" ctrlrange="-25 25"/>
+    <motor joint="rh_lower_leg_joint" gear="1" ctrlrange="-25 25"/>
   </actuator>
 
   <keyframe>
