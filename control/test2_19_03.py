@@ -34,7 +34,7 @@ abduction_amplitude = 0.07  # lateral abduction during swing
 # ── Timing & stopping condition ────────────────────────────────────────────────
 timestep     = model.opt.timestep  # simulation timestep (seconds), from XML
 gait_time    = 0.0                 # accumulated gait clock (only advances while walking)
-TARGET_DIST  = 100.0               # stop gait oscillation after travelling this far (metres)
+TARGET_DIST  = 2.0               # stop gait oscillation after travelling this far (metres)
 debug_timer  = 0.0                 # accumulator used to throttle console prints
 
 # ── Phase-to-angle helper ──────────────────────────────────────────────────────
@@ -58,7 +58,6 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
     x_start = data.qpos[0]
     while viewer.is_running():
         
-
         # Current robot position in world frame
         x_current = data.qpos[0]
         y_current = data.qpos[1]

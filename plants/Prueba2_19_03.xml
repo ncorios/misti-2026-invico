@@ -1,6 +1,6 @@
 <mujoco model="xgo">
   <compiler angle="radian"/>
-  <option gravity="0 0 -9.81" timestep="0.002" iterations="100"/>
+  <option gravity="0 0 -9.81" timestep="0.008" iterations="100"/>
 
   <default>
     <joint damping="2.0" armature="0.01"/>
@@ -50,7 +50,7 @@
       <geom pos="-0.016732 4.4164e-05 0.11335" quat="1 0 0 0" type="mesh" rgba="1 1 1 1" mesh="laser_link"/>
 
       <!-- colisión simple base -->
-      <geom type="box" pos="0.02 0 0.05" size="0.09 0.04 0.025"
+      <geom type="box" pos="0.02 0 0.05" size="0.1 0.04 0.025"
             rgba="0 0 0 0" contype="1" conaffinity="1"/>
 
       <!-- LF -->
@@ -81,7 +81,7 @@
                       diaginertia="1.41901e-05 1.36483e-05 1.31741e-06"/>
             <joint name="lf_lower_leg_joint" axis="0 1 0" range="-1.57 1.57"/>
             <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="lf_lower_leg_link"/>
-            <geom type="capsule" fromto="0 0 0 0 0 -0.085" size="0.010"
+            <geom type="capsule" fromto="0 0 0 0 0 -0.085" size="0.015"
                   rgba="0 0 0 0" contype="1" conaffinity="1"
                   friction="2.0 0.5 0.1"/>
 
@@ -116,7 +116,7 @@
                       diaginertia="1.41901e-05 1.36483e-05 1.31741e-06"/>
             <joint name="rf_lower_leg_joint" axis="0 1 0" range="-1.57 1.57"/>
             <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="rf_lower_leg_link"/>
-            <geom type="capsule" fromto="0 0 0 0 0 -0.085" size="0.010"
+            <geom type="capsule" fromto="0 0 0 0 0 -0.085" size="0.015"
                   rgba="0 0 0 0" contype="1" conaffinity="1"
                   friction="2.0 0.5 0.1"/>
           </body>
@@ -150,7 +150,7 @@
                       diaginertia="1.41901e-05 1.36483e-05 1.31741e-06"/>
             <joint name="lh_lower_leg_joint" axis="0 1 0" range="-1.57 1.57"/>
             <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="lh_lower_leg_link"/>
-            <geom type="capsule" fromto="0 0 0 0 0 -0.085" size="0.010"
+            <geom type="capsule" fromto="0 0 0 0 0 -0.085" size="0.015"
                   rgba="0 0 0 0" contype="1" conaffinity="1"
                   friction="2.0 0.5 0.1"/>
           </body>
@@ -184,7 +184,7 @@
                       diaginertia="1.41901e-05 1.36483e-05 1.31741e-06"/>
             <joint name="rh_lower_leg_joint" axis="0 1 0" range="-1.57 1.57"/>
             <geom type="mesh" rgba="0.898039 0.917647 0.929412 1" mesh="rh_lower_leg_link"/>
-            <geom type="capsule" fromto="0 0 0 0 0 -0.085" size="0.010"
+            <geom type="capsule" fromto="0 0 0 0 0 -0.085" size="0.015"
                   rgba="0 0 0 0" contype="1" conaffinity="1"
                   friction="2.0 0.5 0.1"/>
           </body>
