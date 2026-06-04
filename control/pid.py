@@ -56,10 +56,6 @@ class PID:
         return self.calc_P() + self.calc_I() + self.calc_D()
 
 # feed forward control to compliment the PID controller, can be used to compute a torque based on the arm model to help eliminate steady state error and improve response. This is not strictly necessary for a PID controller but can enhance performance if the model is accurate.
-def feedforward(theta, m, l, g):
-    # feedforward torque based on the arm model
-    tau_ff = m * g * l * np.sin(theta)
-    return tau_ff
 
 
     
