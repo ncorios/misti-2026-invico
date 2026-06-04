@@ -1,4 +1,10 @@
-import os, mujoco, mujoco.viewer, numpy as np
+import os, mujoco, mujoco.viewer, numpy as np, time, keyboard
+
+Running = True
+def _key_callback(key: int) -> None:
+    global Running
+    if key == 32:
+        Running = not Running
 
 # ── Model loading ──────────────────────────────────────────────────────────────
 # Build an absolute path to the robot XML, one level up in the "plants" folder
@@ -51,14 +57,13 @@ def phase_to_angle(sin_value):
         return stance_amplitude * sin_value
 
 # ── Main simulation loop ───────────────────────────────────────────────────────
-with mujoco.viewer.launch_passive(model, data) as viewer:
+with mujoco.viewer.launch_passive(model, data, key_callback = _key_callback) as viewer:
     # lock camera onto body 1 (usually the torso/base link)
     viewer.cam.type = mujoco.mjtCamera.mjCAMERA_TRACKING
     viewer.cam.trackbodyid = 1  # change to the body index of your robot's base
-    
+
     x_start = data.qpos[0]
     while viewer.is_running():
-        
         # Current robot position in world frame
         x_current = data.qpos[0]
         y_current = data.qpos[1]
@@ -72,7 +77,7 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         if debug_timer >= 1.0:
             debug_timer = 0.0
             print(f"x={x_current:.4f}  y={y_current:.4f}  "
-                  f"dist={distance_travelled:.4f}  gait_t={gait_time:.2f}")
+                    f"dist={distance_travelled:.4f}  gait_t={gait_time:.2f}")
 
         # Start from the desired resting angles each control cycle
         ctrl = desired_joint_angles.copy()
@@ -109,7 +114,13 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
 
             # Advance the gait clock by 10 timesteps (matching the step loop below)
             gait_time += 10 * timestep
-
+            with viewer.lock():
+                if Running:
+                    continue
+                else:
+                    mujoco.mj_forward(model, data)
+                viewer.sync()
+            time.sleep(0.001)
         # ── Apply controls and step the physics ───────────────────────────────
         data.ctrl[:] = ctrl
         for _ in range(10):           # integrate 10 physics steps per control cycle
