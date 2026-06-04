@@ -9,21 +9,21 @@
   </default>
 
   <asset>
-    <mesh name="base_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/base_link.STL"/>
-    <mesh name="lf_hip_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/lf_hip_link.STL"/>
-    <mesh name="lf_upper_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/lf_upper_leg_link.STL"/>
-    <mesh name="lf_lower_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/lf_lower_leg_link.STL"/>
-    <mesh name="rf_hip_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/rf_hip_link.STL"/>
-    <mesh name="rf_upper_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/rf_upper_leg_link.STL"/>
-    <mesh name="rf_lower_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/rf_lower_leg_link.STL"/>
-    <mesh name="lh_hip_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/lh_hip_link.STL"/>
-    <mesh name="lh_upper_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/lh_upper_leg_link.STL"/>
-    <mesh name="lh_lower_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/lh_lower_leg_link.STL"/>
-    <mesh name="rh_hip_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/rh_hip_link.STL"/>
-    <mesh name="rh_upper_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/rh_upper_leg_link.STL"/>
-    <mesh name="rh_lower_leg_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/rh_lower_leg_link.STL"/>
-    <mesh name="camera_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/camera_link.STL"/>
-    <mesh name="laser_link" content_type="model/stl" file="C:/Users/ramir/OneDrive/Escritorio/Dogzilla/meshes/XGO/laser_link.STL"/>
+    <mesh name="base_link" content_type="model/stl" file="meshes/XGO/base_link.STL"/>
+    <mesh name="lf_hip_link" content_type="model/stl" file="meshes/XGO/lf_hip_link.STL"/>
+    <mesh name="lf_upper_leg_link" content_type="model/stl" file="meshes/XGO/lf_upper_leg_link.STL"/>
+    <mesh name="lf_lower_leg_link" content_type="model/stl" file="meshes/XGO/lf_lower_leg_link.STL"/>
+    <mesh name="rf_hip_link" content_type="model/stl" file="meshes/XGO/rf_hip_link.STL"/>
+    <mesh name="rf_upper_leg_link" content_type="model/stl" file="meshes/XGO/rf_upper_leg_link.STL"/>
+    <mesh name="rf_lower_leg_link" content_type="model/stl" file="meshes/XGO/rf_lower_leg_link.STL"/>
+    <mesh name="lh_hip_link" content_type="model/stl" file="meshes/XGO/lh_hip_link.STL"/>
+    <mesh name="lh_upper_leg_link" content_type="model/stl" file="meshes/XGO/lh_upper_leg_link.STL"/>
+    <mesh name="lh_lower_leg_link" content_type="model/stl" file="meshes/XGO/lh_lower_leg_link.STL"/>
+    <mesh name="rh_hip_link" content_type="model/stl" file="meshes/XGO/rh_hip_link.STL"/>
+    <mesh name="rh_upper_leg_link" content_type="model/stl" file="meshes/XGO/rh_upper_leg_link.STL"/>
+    <mesh name="rh_lower_leg_link" content_type="model/stl" file="meshes/XGO/rh_lower_leg_link.STL"/>
+    <mesh name="camera_link" content_type="model/stl" file="meshes/XGO/camera_link.STL"/>
+    <mesh name="laser_link" content_type="model/stl" file="meshes/XGO/laser_link.STL"/>
   </asset>
 
   <worldbody>

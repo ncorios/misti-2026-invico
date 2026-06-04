@@ -1,8 +1,8 @@
-import mujoco
-import mujoco.viewer
-import numpy as np
+import os, mujoco, mujoco.viewer , numpy as np
 
-model = mujoco.MjModel.from_xml_path("Prueba2_19_03.xml")
+xml_path = os.path.join(os.path.dirname(__file__), "..", "plants", "Prueba2_19_03.xml")
+xml_path = os.path.abspath(xml_path)
+model = mujoco.MjModel.from_xml_path(xml_path)
 data = mujoco.MjData(model)
 
 key_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_KEY, "stand")
