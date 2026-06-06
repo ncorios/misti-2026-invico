@@ -8,7 +8,7 @@ class PID:
     # e = theta_d - theta (error)
     # integrator += e * dt (integral/accumulated error)
     # de/dt = rate of change of error, (D often also can be -K_d*dtheta/dt)
-    # torque_ff(theta) = torque computed from a model, not inherently standard but complements. pid can usually eliminate error without modeling
+    # saturation array tracks saturation, needs an array of torque limits for motors to call calc torque
 
     # how to use
     # 1. initialize with gains and initial theta
@@ -21,28 +21,28 @@ class PID:
         self.ki = ki
         self.kd = kd
         self.dt = dt
-        self.integrator = 0
-        self.theta = None
-        self.last_theta = None
-        self.error = 0.0
+        self.integrator = np.zeros(12)  # assuming 12 joints for the quadruped
+        self.error = np.zeros(12)  # assuming 12 joints for the quadruped
+        self.theta = np.zeros(12)  # current joint angles
+        self.last_theta = np.zeros(12)  # to compute derivative term, assuming 12 joints
+        self.saturation = np.zeros((12) , dtype = bool)  # array to track saturation of motor
+        self.torques = np.zeros(12)  # array to store computed torques for each joint
 
-    def update_theta(self, theta):
+    def update_thetas(self, current_angles):
         self.last_theta = self.theta
-        self.theta = theta
+        self.theta = current_angles.copy()
         return self.theta
     
-    def update_error(self, theta_d):
-        self.last_error = self.error # dead but useful if we want to use de/dt instead of -dtheta/dt
-        self.error = theta_d - self.theta
+    def update_errors(self, current_angles, desired_angles):
+        self.last_error = self.error
+        self.error = desired_angles - current_angles
         return self.error
     
     def calc_P(self):
         return self.kp * self.error
-        
     
-    def calc_I(self):
-        self.integrator += self.error * self.dt
-        self.integrator = np.clip(self.integrator, -2.0, 2.0)
+    def calc_I(self, saturation):
+        self.integrator[~saturation] += self.error[~saturation] * self.dt
         return self.ki * self.integrator
        
     def calc_D(self):
@@ -52,11 +52,12 @@ class PID:
         theta_dot = (self.theta - self.last_theta) / self.dt
         return -self.kd * theta_dot
         
-    def calc_torque(self, theta_d):
-        self.update_error(theta_d)
-        return self.calc_P() + self.calc_I() + self.calc_D()
+    def calc_torque(self, torque_limits):
+        saturation = np.abs(self.torques) >= torque_limits
+        self.torques = self.calc_P() + self.calc_I(saturation) + self.calc_D()
+        self.toques = np.clip(self.torques, -torque_limits, torque_limits)  # clip torques to limits
+        return self.torques
 
-# feed forward control to compliment the PID controller, can be used to compute a torque based on the arm model to help eliminate steady state error and improve response. This is not strictly necessary for a PID controller but can enhance performance if the model is accurate.
 
 
     
