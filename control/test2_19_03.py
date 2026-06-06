@@ -114,13 +114,13 @@ with mujoco.viewer.launch_passive(model, data, key_callback = _key_callback) as 
 
             # Advance the gait clock by 10 timesteps (matching the step loop below)
             gait_time += 10 * timestep
-            with viewer.lock():
-                if Running:
-                    continue
-                else:
-                    mujoco.mj_forward(model, data)
-                viewer.sync()
-            time.sleep(0.001)
+        with viewer.lock():
+            if Running:
+                continue
+            else:
+                mujoco.mj_forward(model, data)
+            viewer.sync()
+        time.sleep(0.001)
         # ── Apply controls and step the physics ───────────────────────────────
         data.ctrl[:] = ctrl
         for _ in range(10):           # integrate 10 physics steps per control cycle

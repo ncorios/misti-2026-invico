@@ -42,6 +42,7 @@ class PID:
     
     def calc_I(self):
         self.integrator += self.error * self.dt
+        self.integrator = np.clip(self.integrator, -2.0, 2.0)
         return self.ki * self.integrator
        
     def calc_D(self):
