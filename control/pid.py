@@ -49,15 +49,21 @@ class PID:
         # using dtheta/dt, will add filtering later
         if self.last_theta is None:
             return 0.0
-        theta_dot = (self.theta - self.last_theta) / self.dt
-        return -self.kd * theta_dot
+        self.theta_dot = (self.theta - self.last_theta) / self.dt
+        return -self.kd * self.theta_dot
         
-    def calc_torque(self, torque_limits):
-        saturation = np.abs(self.torques) >= torque_limits
-        self.torques = self.calc_P() + self.calc_I(saturation) + self.calc_D()
-        self.toques = np.clip(self.torques, -torque_limits, torque_limits)  # clip torques to limits
+    def calc_torque(self, ff, torque_limits):
+    # full provisional command, integrator NOT yet updated
+        u = self.calc_P() + self.ki * self.integrator + self.calc_D() + ff
+        u_applied = np.clip(u, -torque_limits, torque_limits)   # what will actually go to ctrl
+        saturated = u != u_applied                               # detect from the real clip
+        winding_up = np.sign(self.error) == np.sign(u)           # error pushing further into the rail
+        freeze = saturated & winding_up
+        self.integrator[~freeze] += self.error[~freeze] * self.dt
+        # recompute with the updated integrator and return the clipped command
+        u = self.calc_P() + self.ki * self.integrator + self.calc_D() + ff
+        self.torques = np.clip(u, -torque_limits, torque_limits)
         return self.torques
-
 
 
     
