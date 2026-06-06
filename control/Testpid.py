@@ -12,7 +12,7 @@ def _key_callback(key: int) -> None:
 
 # ── Model loading ──────────────────────────────────────────────────────────────
 # Build an absolute path to the robot XML, one level up in the "plants" folder
-xml_path = os.path.join(os.path.dirname(__file__), "..", "plants", "Prueba2_19_03.xml")
+xml_path = os.path.join(os.path.dirname(__file__), "..", "plants", "controler-v1.xml")
 xml_path = os.path.abspath(xml_path)
 
 model = mujoco.MjModel.from_xml_path(xml_path)
@@ -34,24 +34,22 @@ desired_joint_angles = np.array([
 ], dtype=float)
 
 # ── PID gains ─────────────────────────────────────────────────────────────────
-KP = 15.0
+KP = 10.0
 KI = 0.1
-KD = 0.2
+KD = 0.5
 TORQUE_LIMIT = 25.0   # Nm, matches XML ctrlrange="-25 25"
-
 dt = model.opt.timestep  # 0.008 s
 
 # One PID controller per joint; pre-seed theta so calc_D works from step 1.
 initial_thetas = data.qpos[7:19].copy()   # joint angles after the 7-DOF free joint
-pids = [PID(KP, KI, KD, dt) for _ in range(12)]
-for i, pid in enumerate(pids):
-    pid.update_theta(initial_thetas[i])
+pid = PID(KP, KI, KD, dt)
+pid.update_thetas(data.qpos[7:19].copy())
 
 # ── Gait parameters ───────────────────────────────────────────────
-gait_frequency       = 0.2
-swing_amplitude      = 0.12
-stance_amplitude     = 0.06
-knee_amplitude       = 0.15
+gait_frequency       = .1
+swing_amplitude      = 0.18
+stance_amplitude     = 0.09
+knee_amplitude       = 0.22
 abduction_amplitude  = 0.07
 
 # ── Timing ────────────────────────────────────────────────────────────────────
@@ -78,13 +76,13 @@ with mujoco.viewer.launch_passive(model, data, key_callback=_key_callback) as vi
             # Paused: just keep the viewer alive
             mujoco.mj_forward(model, data)
             viewer.sync()
-            time.sleep(0.004)
+            time.sleep(0.001)
             continue
-
+        time.sleep(.002)
         x_current = data.qpos[0]
         y_current = data.qpos[1]
         distance_travelled = abs(x_current - x_start)
-        is_walking = distance_travelled < TARGET_DIST
+        is_walking = distance_travelled <= TARGET_DIST
 
         # ── Debug print ───────────────────────────────────────────────────────
         debug_timer += 10 * dt
@@ -129,10 +127,9 @@ with mujoco.viewer.launch_passive(model, data, key_callback=_key_callback) as vi
             current_thetas = data.qpos[7:19]   # live joint positions
 
             torques = np.zeros(12)
-            for i, pid in enumerate(pids):
-                pid.update_theta(current_thetas[i])        # feed back actual angle
-                torques[i] = pid.calc_torque(desired[i])   # PID → torque
-
+            pid.update_thetas(current_thetas)        # feed back actual angle
+            pid.update_errors(current_thetas, desired)
+            torques = pid.calc_torque(desired)   # PID → torque
             # Clamp to actuator limits
             torques = np.clip(torques, -TORQUE_LIMIT, TORQUE_LIMIT)
 
