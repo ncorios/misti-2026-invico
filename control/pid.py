@@ -59,9 +59,8 @@ class PID:
         saturated = u != u_applied                               # detect from the real clip
         winding_up = np.sign(self.error) == np.sign(u)           # error pushing further into the rail
         freeze = saturated & winding_up
-        self.integrator[~freeze] += self.error[~freeze] * self.dt
         # recompute with the updated integrator and return the clipped command
-        u = self.calc_P() + self.ki * self.integrator + self.calc_D() + ff
+        u = self.calc_P() + self.calc_I(freeze) + self.calc_D() + ff
         self.torques = np.clip(u, -torque_limits, torque_limits)
         return self.torques
 
