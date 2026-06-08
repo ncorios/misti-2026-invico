@@ -9,7 +9,7 @@ def _key_callback(key: int) -> None:
         Running = not Running
 
 # ── Model loading ──────────────────────────────────────────────────────────────
-xml_path = os.path.join(os.path.dirname(__file__), "..", "plants", "controler-v1.xml")
+xml_path = os.path.join(os.path.dirname(__file__), "..", "learning", "controler-v1.xml")
 xml_path = os.path.abspath(xml_path)
 
 model = mujoco.MjModel.from_xml_path(xml_path)

@@ -9,21 +9,21 @@
   </default>
 
   <asset>
-    <mesh name="base_link" content_type="model/stl" file="meshes/XGO/base_link.STL"/>
-    <mesh name="lf_hip_link" content_type="model/stl" file="meshes/XGO/lf_hip_link.STL"/>
-    <mesh name="lf_upper_leg_link" content_type="model/stl" file="meshes/XGO/lf_upper_leg_link.STL"/>
-    <mesh name="lf_lower_leg_link" content_type="model/stl" file="meshes/XGO/lf_lower_leg_link.STL"/>
-    <mesh name="rf_hip_link" content_type="model/stl" file="meshes/XGO/rf_hip_link.STL"/>
-    <mesh name="rf_upper_leg_link" content_type="model/stl" file="meshes/XGO/rf_upper_leg_link.STL"/>
-    <mesh name="rf_lower_leg_link" content_type="model/stl" file="meshes/XGO/rf_lower_leg_link.STL"/>
-    <mesh name="lh_hip_link" content_type="model/stl" file="meshes/XGO/lh_hip_link.STL"/>
-    <mesh name="lh_upper_leg_link" content_type="model/stl" file="meshes/XGO/lh_upper_leg_link.STL"/>
-    <mesh name="lh_lower_leg_link" content_type="model/stl" file="meshes/XGO/lh_lower_leg_link.STL"/>
-    <mesh name="rh_hip_link" content_type="model/stl" file="meshes/XGO/rh_hip_link.STL"/>
-    <mesh name="rh_upper_leg_link" content_type="model/stl" file="meshes/XGO/rh_upper_leg_link.STL"/>
-    <mesh name="rh_lower_leg_link" content_type="model/stl" file="meshes/XGO/rh_lower_leg_link.STL"/>
-    <mesh name="camera_link" content_type="model/stl" file="meshes/XGO/camera_link.STL"/>
-    <mesh name="laser_link" content_type="model/stl" file="meshes/XGO/laser_link.STL"/>
+    <mesh name="base_link" content_type="model/stl" file="assets/XGO/base_link.STL"/>
+    <mesh name="lf_hip_link" content_type="model/stl" file="assets/XGO/lf_hip_link.STL"/>
+    <mesh name="lf_upper_leg_link" content_type="model/stl" file="assets/XGO/lf_upper_leg_link.STL"/>
+    <mesh name="lf_lower_leg_link" content_type="model/stl" file="assets/XGO/lf_lower_leg_link.STL"/>
+    <mesh name="rf_hip_link" content_type="model/stl" file="assets/XGO/rf_hip_link.STL"/>
+    <mesh name="rf_upper_leg_link" content_type="model/stl" file="assets/XGO/rf_upper_leg_link.STL"/>
+    <mesh name="rf_lower_leg_link" content_type="model/stl" file="assets/XGO/rf_lower_leg_link.STL"/>
+    <mesh name="lh_hip_link" content_type="model/stl" file="assets/XGO/lh_hip_link.STL"/>
+    <mesh name="lh_upper_leg_link" content_type="model/stl" file="assets/XGO/lh_upper_leg_link.STL"/>
+    <mesh name="lh_lower_leg_link" content_type="model/stl" file="assets/XGO/lh_lower_leg_link.STL"/>
+    <mesh name="rh_hip_link" content_type="model/stl" file="assets/XGO/rh_hip_link.STL"/>
+    <mesh name="rh_upper_leg_link" content_type="model/stl" file="assets/XGO/rh_upper_leg_link.STL"/>
+    <mesh name="rh_lower_leg_link" content_type="model/stl" file="assets/XGO/rh_lower_leg_link.STL"/>
+    <mesh name="camera_link" content_type="model/stl" file="assets/XGO/camera_link.STL"/>
+    <mesh name="laser_link" content_type="model/stl" file="assets/XGO/laser_link.STL"/>
   </asset>
 
   <worldbody>
