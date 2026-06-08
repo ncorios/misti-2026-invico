@@ -38,3 +38,6 @@ venv/
 .
 # vs code
 .vscode/
+
+# ignore old code
+old/
