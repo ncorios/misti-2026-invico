@@ -41,3 +41,13 @@ venv/
 
 # ignore old code
 old/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
