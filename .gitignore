@@ -42,6 +42,10 @@ venv/
 # ignore old code
 old/
 
+# MuJoCo runtime files
+MJDATA.TXT
+mjmodel.mjb
+
 # macOS
 .DS_Store
 .AppleDouble
