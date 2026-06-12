@@ -1,6 +1,5 @@
-import os, sys, mujoco, mujoco.viewer, numpy as np, time, keyboard
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from controllers.pid import PID
+import os, mujoco, mujoco.viewer, numpy as np, time, keyboard
+from pid import PID   # your existing PID class
 
 # ── Pausing ─────────────────────────────────────────────────────────────────────
 Running = True
@@ -10,7 +9,7 @@ def _key_callback(key: int) -> None:
         Running = not Running
 
 # ── Model loading ──────────────────────────────────────────────────────────────
-xml_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "envs", "Prueba2_19_03.xml"))
+xml_path = os.path.join(os.path.dirname(__file__), "controler-v1.xml")
 
 model = mujoco.MjModel.from_xml_path(xml_path)
 data  = mujoco.MjData(model)

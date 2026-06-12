@@ -1,6 +1,3 @@
-### NOT WORKING
-
-
 """
 log_run.py — run the controller headless and save joint/desired/error arrays.
 
@@ -10,15 +7,14 @@ to this file. Then run plot_log.py to visualise.
 
     python log_run.py
 """
-import os, sys
+import os
 import numpy as np
 import mujoco
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from controllers.pid import PID
+from pid import PID
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-XML  = os.path.abspath(os.path.join(HERE, "..", "envs", "Prueba2_19_03.xml"))
-OUT  = os.path.abspath(os.path.join(HERE, "..", "results", "run_log.npz"))
+XML  = os.path.abspath(os.path.join(HERE, "..", "plants", "controler-v1.xml"))
+OUT  = os.path.join(HERE, "run_log.npz")
 T_SIM = 12.0   # seconds to simulate
 
 # ── Model ──────────────────────────────────────────────────────────────────────
