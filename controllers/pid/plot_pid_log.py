@@ -1,6 +1,3 @@
-
-## NOT WORKING
-
 """
 plot_log.py — plot desired vs actual joint angles and tracking error.
 
@@ -18,8 +15,7 @@ matplotlib.use("Agg")          # comment this out if you want interactive window
 import matplotlib.pyplot as plt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-RESULTS = os.path.abspath(os.path.join(HERE, "..", "results"))
-d = np.load(os.path.join(RESULTS, "run_log.npz"))
+d = np.load(os.path.join(HERE, "run_log.npz"))
 t, des, act, err = d["t"], d["desired"], d["actual"], d["error"]
 
 legs = ["LF", "RF", "LH", "RH"]
@@ -44,7 +40,7 @@ for r, leg in enumerate(legs):
 ax[0, 0].legend(loc="upper right", fontsize=9)
 fig.suptitle("desired vs actual joint angles", fontsize=13, y=0.995)
 fig.tight_layout(rect=[0, 0, 1, 0.98])
-fig.savefig(os.path.join(RESULTS, "tracking.png"), dpi=150)
+fig.savefig(os.path.join(HERE, "tracking.png"), dpi=150)
 
 # ── Figure 2: error over time, grouped by joint type ────────────────────────────
 fig2, ax2 = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
@@ -63,6 +59,6 @@ for c, col in enumerate(cols):
 ax2[-1].set_xlabel("time (s)")
 fig2.suptitle("tracking error (desired − actual) over time", fontsize=13, y=0.995)
 fig2.tight_layout(rect=[0, 0, 1, 0.98])
-fig2.savefig(os.path.join(RESULTS, "error.png"), dpi=150)
+fig2.savefig(os.path.join(HERE, "error.png"), dpi=150)
 
-print("saved tracking.png and error.png in", RESULTS)
+print("saved tracking.png and error.png in", HERE)
