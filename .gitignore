@@ -1,6 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+.ipynb_checkpoints/
 
 # Distribution / packaging
 build/
@@ -35,9 +36,10 @@ instance/
 .venv
 env/
 venv/
-.
-# vs code
-.vscode/
+
+# VS Code (keep settings.json)
+.vscode/*
+!.vscode/settings.json
 
 # ignore old code
 old/
@@ -55,3 +57,19 @@ Icon?
 .Spotlight-V100
 .Trashes
 .fseventsd
+
+# Trained models and weights
+# NOTE: un-ignore these before final submission so readers can run without retraining
+#   (remove the lines below and update requirements.txt — see CLAUDE.md pre-publication checklist)
+controllers/ppo/models/*
+!controllers/ppo/models/.gitkeep
+*.zip
+
+# Training artifacts
+controllers/ppo/tb_logs/*
+!controllers/ppo/tb_logs/.gitkeep
+
+# Recorded videos (metrics.json and summary.csv under ppo_eval/ are NOT ignored)
+*.mp4
+controllers/ppo/ppo_eval/*
+!controllers/ppo/ppo_eval/.gitkeep

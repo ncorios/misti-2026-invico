@@ -1,0 +1,52 @@
+import os
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.env_util import make_vec_env
+from gymnasium.wrappers import TimeLimit
+
+from dogzilla_env import DogEnv
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+XML_PATH = os.path.join(HERE, "ppo_dog.xml")     # resolved relative to this file
+MODEL_DIR = os.path.join(HERE, "models")
+
+
+def make_env():
+    env = DogEnv(xml_file=XML_PATH)
+    env = TimeLimit(env, max_episode_steps=1000)
+    return env
+
+
+def train(version, total_timesteps=1_000_000, n_envs=None):
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    if n_envs is None:
+        n_envs = max(1, os.cpu_count() - 2)
+
+    vec_env = make_vec_env(make_env, n_envs=n_envs, vec_env_cls=SubprocVecEnv)
+
+    model = PPO(
+        "MlpPolicy",
+        vec_env,
+        device="cpu",
+        n_steps=2048,
+        batch_size=256,
+        verbose=1,
+        tensorboard_log=os.path.join(HERE, "tb_logs"),
+    )
+    model.learn(total_timesteps=total_timesteps)
+
+    save_path = os.path.join(MODEL_DIR, f"dog_ppo_v{version}")
+    model.save(save_path)
+    print(f"\nsaved model to {save_path}.zip")
+    print("decide if it's worth evaluating, then run:  python ppo_log.py", version)
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("version", help="version number for this run, e.g. 1")
+    parser.add_argument("--steps", type=int, default=1_000_000)
+    parser.add_argument("--envs", type=int, default=None)
+    args = parser.parse_args()
+    # SubprocVecEnv requires the __main__ guard — this is it
+    train(args.version, total_timesteps=args.steps, n_envs=args.envs)
