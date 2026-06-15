@@ -129,4 +129,5 @@ with mujoco.viewer.launch_passive(model, data, key_callback=_key_callback) as vi
             data.ctrl[:] = torques
             mujoco.mj_step(model, data)
 
+        print(data.qpos[2])
         viewer.sync()
