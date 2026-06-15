@@ -73,3 +73,4 @@ controllers/ppo/tb_logs/*
 *.mp4
 controllers/ppo/ppo_eval/*
 !controllers/ppo/ppo_eval/.gitkeep
+!controllers/ppo/ppo_eval/how-to-read-outputs.md

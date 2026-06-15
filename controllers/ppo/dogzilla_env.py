@@ -1,8 +1,9 @@
+import os
 import numpy as np
 from gymnasium import utils
 from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.spaces import Box
-import os
+import mujoco
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_XML = os.path.join(HERE, "assets/ppo_dog.xml")
@@ -111,13 +112,14 @@ on velocities, so each episode starts slightly varied around the standing pose.
         xml_file: str = DEFAULT_XML,
         frame_skip: int = 5,
         default_camera_config: dict[str, float | int] = DEFAULT_CAMERA_CONFIG,
-        forward_reward_weight: float = 5.0,
+        forward_reward_weight: float = 8.0,
         smoothness_cost_weight: float = 0.01,
         healthy_reward: float = 1.0,
         main_body: int | str = "base",
         terminate_when_unhealthy: bool = True,
         healthy_z_range: tuple[float, float] = (0.05, 0.17),
         reset_noise_scale: float = 0.1,
+        upright_threshold: float = 0.5,
         **kwargs,
     ):
         utils.EzPickle.__init__(
@@ -132,6 +134,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
             terminate_when_unhealthy,
             healthy_z_range,
             reset_noise_scale,
+            upright_threshold,
             **kwargs,
         )
 
@@ -141,6 +144,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
         self._healthy_reward = healthy_reward
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
+        self._upright_threshold = upright_threshold
         self.previous_action = np.zeros(12)
 
         self._main_body = main_body
@@ -192,8 +196,15 @@ on velocities, so each episode starts slightly varied around the standing pose.
     def is_healthy(self):
         state = self.state_vector()
         min_z, max_z = self._healthy_z_range
-        is_healthy = np.isfinite(state).all() and min_z <= state[2] <= max_z
-        return is_healthy
+        height_check = np.isfinite(state).all() and (min_z <= state[2] <= max_z)
+
+        # orientation check: rotate body up-axis to world, see if it still points up
+        quat = self.data.qpos[3:7]
+        up = np.zeros(3)
+        mujoco.mju_rotVecQuat(up, np.array([0.0, 0.0, 1.0]), quat)
+        orientation_check = up[2] > self._upright_threshold
+
+        return height_check and orientation_check
 
     def step(self, action):
         xy_position_before = self.data.body(self._main_body).xpos[:2].copy()
