@@ -71,3 +71,10 @@ self.set_state(qpos, qvel)
 later should write instructions for file path changing
 
 to do for the week, get env working, run some runs, test evals and videos
+
+for sim to real: 
+clamp forcerange → yes, compute it from the 4.5 kg·cm spec (~0.44 N·m). Do this, it's a clear improvement and your current value is 50× off.
+match kp/damping → not from a spec, but yes via system identification against the real servo's step response. That requires hardware access and a measurement, so it's a pre-deployment task, not a today task.
+get weights and everything in xml as close to real robot as possible
+
+masses,dynamics, inertia, etc are all approximate in the xml. fine for comparison/validation, need to ground for sim2real.

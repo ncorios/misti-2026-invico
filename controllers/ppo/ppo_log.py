@@ -8,7 +8,6 @@ from gymnasium.wrappers import RecordVideo
 from dogzilla_env import DogEnv
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-XML_PATH = os.path.join(HERE, "ppo_dog.xml")
 MODEL_DIR = os.path.join(HERE, "models")
 EVAL_DIR = os.path.join(HERE, "ppo_eval")
 SUMMARY_CSV = os.path.join(EVAL_DIR, "summary.csv")
@@ -22,7 +21,7 @@ def evaluate(version, n_steps=1000, record=True):
     version_dir = os.path.join(EVAL_DIR, f"v{version}")
     os.makedirs(version_dir, exist_ok=True)
 
-    env = DogEnv(xml_file=XML_PATH, render_mode="rgb_array")
+    env = DogEnv(render_mode="rgb_array")
     if record:
         env = RecordVideo(
             env,

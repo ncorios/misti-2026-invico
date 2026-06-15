@@ -1,5 +1,5 @@
 <mujoco model="xgo">
-  <compiler angle="radian"/>
+  <compiler angle="radian" meshdir="XGO"/>
   <option gravity="0 0 -9.81" timestep="0.002" iterations="100"/>
 
   <default>
@@ -9,21 +9,21 @@
   </default>
 
   <asset>
-    <mesh name="base_link" content_type="model/stl" file="envs/assets/XGO/base_link.STL"/>
-    <mesh name="lf_hip_link" content_type="model/stl" file="envs/assets/XGO/lf_hip_link.STL"/>
-    <mesh name="lf_upper_leg_link" content_type="model/stl" file="envs/assets/XGO/lf_upper_leg_link.STL"/>
-    <mesh name="lf_lower_leg_link" content_type="model/stl" file="envs/assets/XGO/lf_lower_leg_link.STL"/>
-    <mesh name="rf_hip_link" content_type="model/stl" file="envs/assets/XGO/rf_hip_link.STL"/>
-    <mesh name="rf_upper_leg_link" content_type="model/stl" file="envs/assets/XGO/rf_upper_leg_link.STL"/>
-    <mesh name="rf_lower_leg_link" content_type="model/stl" file="envs/assets/XGO/rf_lower_leg_link.STL"/>
-    <mesh name="lh_hip_link" content_type="model/stl" file="envs/assets/XGO/lh_hip_link.STL"/>
-    <mesh name="lh_upper_leg_link" content_type="model/stl" file="envs/assets/XGO/lh_upper_leg_link.STL"/>
-    <mesh name="lh_lower_leg_link" content_type="model/stl" file="envs/assets/XGO/lh_lower_leg_link.STL"/>
-    <mesh name="rh_hip_link" content_type="model/stl" file="envs/assets/XGO/rh_hip_link.STL"/>
-    <mesh name="rh_upper_leg_link" content_type="model/stl" file="envs/assets/XGO/rh_upper_leg_link.STL"/>
-    <mesh name="rh_lower_leg_link" content_type="model/stl" file="envs/assets/XGO/rh_lower_leg_link.STL"/>
-    <mesh name="camera_link" content_type="model/stl" file="envs/assets/XGO/camera_link.STL"/>
-    <mesh name="laser_link" content_type="model/stl" file="envs/assets/XGO/laser_link.STL"/>
+    <mesh name="base_link" content_type="model/stl" file="base_link.STL"/>
+    <mesh name="lf_hip_link" content_type="model/stl" file="lf_hip_link.STL"/>
+    <mesh name="lf_upper_leg_link" content_type="model/stl" file="lf_upper_leg_link.STL"/>
+    <mesh name="lf_lower_leg_link" content_type="model/stl" file="lf_lower_leg_link.STL"/>
+    <mesh name="rf_hip_link" content_type="model/stl" file="rf_hip_link.STL"/>
+    <mesh name="rf_upper_leg_link" content_type="model/stl" file="rf_upper_leg_link.STL"/>
+    <mesh name="rf_lower_leg_link" content_type="model/stl" file="rf_lower_leg_link.STL"/>
+    <mesh name="lh_hip_link" content_type="model/stl" file="lh_hip_link.STL"/>
+    <mesh name="lh_upper_leg_link" content_type="model/stl" file="lh_upper_leg_link.STL"/>
+    <mesh name="lh_lower_leg_link" content_type="model/stl" file="lh_lower_leg_link.STL"/>
+    <mesh name="rh_hip_link" content_type="model/stl" file="rh_hip_link.STL"/>
+    <mesh name="rh_upper_leg_link" content_type="model/stl" file="rh_upper_leg_link.STL"/>
+    <mesh name="rh_lower_leg_link" content_type="model/stl" file="rh_lower_leg_link.STL"/>
+    <mesh name="camera_link" content_type="model/stl" file="camera_link.STL"/>
+    <mesh name="laser_link" content_type="model/stl" file="laser_link.STL"/>
   </asset>
 
   <worldbody>
