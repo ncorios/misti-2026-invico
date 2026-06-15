@@ -49,3 +49,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # SubprocVecEnv requires the __main__ guard — this is it
     train(args.version, total_timesteps=args.steps, n_envs=args.envs)
+
+#copy and paste to run, add version at end: python3 controllers/ppo/ppo_training.py
