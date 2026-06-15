@@ -1,8 +1,11 @@
 import numpy as np
-
 from gymnasium import utils
 from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.spaces import Box
+import os
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_XML = os.path.join(HERE, "assets/ppo_dog.xml")
 
 DEFAULT_CAMERA_CONFIG = {
     "distance": 4.0,
@@ -14,7 +17,8 @@ class DogEnv(MujocoEnv, utils.EzPickle):
     """
 DOGZILLA S2 (XGO) quadruped locomotion environment.
 
-A 12-DOF position-controlled quadruped (4 legs × hip/upper/lower joints).
+A 12-DOF position-controlled quadruped (4 legs * abduction/hip/knee joints).
+
 Adapted from the Gymnasium Ant-v5 MuJoCo environment, with observation space,
 reward, and termination redefined for the real DOGZILLA S2 hardware so a trained
 policy targets only quantities the physical robot can measure or command.
@@ -73,6 +77,24 @@ framequat sensor.]
 ### Truncation
 Episode length capped at [MAX_EPISODE_STEPS] timesteps (via TimeLimit wrapper or
 registration).
+
+## Reset
+The robot is reset to the "stand" keyframe defined in the XML model:
+
+<keyframe>
+    <key name="stand"
+         qpos="0 0 0.108 1 0 0 0   0 0.65 -1.10   0 0.65 -1.10   0 0.65 -1.10   0 0.65 -1.10"
+         ctrl="0 0.65 -1.10   0 0.65 -1.10   0 0.65 -1.10   0 0.65 -1.10"/>
+</keyframe>
+
+qpos layout: base position (x, y, z = 0, 0, 0.108), base orientation quaternion
+(w,x,y,z = 1,0,0,0, i.e. level), then 12 joint angles (hip, upper, lower) per leg
+in order LF, RF, LH, RH — each leg holds (0, 0.65, -1.10) to stand.
+
+qvel: linear torso velocites, joint angular velocities. 0 for standing keyframe, called anyways.
+
+Adds noise (scaled by reset_noise_scale): uniform on joint positions, Gaussian
+on velocities, so each episode starts slightly varied around the standing pose.
 """
 
     metadata = {
@@ -86,20 +108,16 @@ registration).
 
     def __init__(
         self,
-        xml_file: str = "ant.xml",
+        xml_file: str = DEFAULT_XML,
         frame_skip: int = 5,
         default_camera_config: dict[str, float | int] = DEFAULT_CAMERA_CONFIG,
-        forward_reward_weight: float = 1,
-        ctrl_cost_weight: float = 0.5,
-        contact_cost_weight: float = 5e-4,
+        forward_reward_weight: float = 5.0,
+        smoothness_cost_weight: float = 0.01,
         healthy_reward: float = 1.0,
-        main_body: int | str = 1,
+        main_body: int | str = "base",
         terminate_when_unhealthy: bool = True,
-        healthy_z_range: tuple[float, float] = (0.2, 1.0),
-        contact_force_range: tuple[float, float] = (-1.0, 1.0),
+        healthy_z_range: tuple[float, float] = (0.05, 0.17),
         reset_noise_scale: float = 0.1,
-        exclude_current_positions_from_observation: bool = True,
-        include_cfrc_ext_in_observation: bool = True,
         **kwargs,
     ):
         utils.EzPickle.__init__(
@@ -108,37 +126,27 @@ registration).
             frame_skip,
             default_camera_config,
             forward_reward_weight,
-            ctrl_cost_weight,
-            contact_cost_weight,
+            smoothness_cost_weight,
             healthy_reward,
             main_body,
             terminate_when_unhealthy,
             healthy_z_range,
-            contact_force_range,
             reset_noise_scale,
-            exclude_current_positions_from_observation,
-            include_cfrc_ext_in_observation,
             **kwargs,
         )
 
         self._forward_reward_weight = forward_reward_weight
-        self._ctrl_cost_weight = ctrl_cost_weight
-        self._contact_cost_weight = contact_cost_weight
+        self.smoothness_cost_weight = smoothness_cost_weight
 
         self._healthy_reward = healthy_reward
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
-
-        self._contact_force_range = contact_force_range
+        self.previous_action = np.zeros(12)
 
         self._main_body = main_body
 
         self._reset_noise_scale = reset_noise_scale
 
-        self._exclude_current_positions_from_observation = (
-            exclude_current_positions_from_observation
-        )
-        self._include_cfrc_ext_in_observation = include_cfrc_ext_in_observation
 
         MujocoEnv.__init__(
             self,
@@ -159,43 +167,26 @@ registration).
             "render_fps": int(np.round(1.0 / self.dt)),
         }
 
-        obs_size = self.data.qpos.size + self.data.qvel.size
-        obs_size -= 2 * exclude_current_positions_from_observation
-        obs_size += self.data.cfrc_ext[1:].size * include_cfrc_ext_in_observation
+        obs_size = self.data.sensordata.size + self.model.nu
+        
 
         self.observation_space = Box(
             low=-np.inf, high=np.inf, shape=(obs_size,), dtype=np.float64
         )
 
         self.observation_structure = {
-            "skipped_qpos": 2 * exclude_current_positions_from_observation,
-            "qpos": self.data.qpos.size
-            - 2 * exclude_current_positions_from_observation,
-            "qvel": self.data.qvel.size,
-            "cfrc_ext": self.data.cfrc_ext[1:].size * include_cfrc_ext_in_observation,
+           "sensordata": self.data.sensordata.size, # 10: gyro + accel + fusion
+           "joint_angles": self.model.nu
         }
 
     @property
     def healthy_reward(self):
         return self.is_healthy * self._healthy_reward
 
-    def control_cost(self, action):
-        control_cost = self._ctrl_cost_weight * np.sum(np.square(action))
-        return control_cost
+    def smoothness_cost(self, action):
+        smoothness_cost = self.smoothness_cost_weight * np.sum(np.square(action - self.previous_action))
+        return smoothness_cost
 
-    @property
-    def contact_forces(self):
-        raw_contact_forces = self.data.cfrc_ext
-        min_value, max_value = self._contact_force_range
-        contact_forces = np.clip(raw_contact_forces, min_value, max_value)
-        return contact_forces
-
-    @property
-    def contact_cost(self):
-        contact_cost = self._contact_cost_weight * np.sum(
-            np.square(self.contact_forces)
-        )
-        return contact_cost
 
     @property
     def is_healthy(self):
@@ -227,6 +218,7 @@ registration).
         if self.render_mode == "human":
             self.render()
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
+        self.previous_action = action
         return observation, reward, terminated, False, info
 
     def _get_rew(self, x_velocity: float, action):
@@ -234,48 +226,59 @@ registration).
         healthy_reward = self.healthy_reward
         rewards = forward_reward + healthy_reward
 
-        ctrl_cost = self.control_cost(action)
-        contact_cost = self.contact_cost
-        costs = ctrl_cost + contact_cost
+        smoothness_cost = self.smoothness_cost(action)
+        costs = smoothness_cost
 
         reward = rewards - costs
 
         reward_info = {
             "reward_forward": forward_reward,
-            "reward_ctrl": -ctrl_cost,
-            "reward_contact": -contact_cost,
+            "reward_smoothness": -smoothness_cost,
             "reward_survive": healthy_reward,
         }
 
         return reward, reward_info
 
     def _get_obs(self):
-        position = self.data.qpos.flatten()
-        velocity = self.data.qvel.flatten()
+        """
+        Build the 22-dim observation — only quantities the real DOGZILLA can measure.
 
-        if self._exclude_current_positions_from_observation:
-            position = position[2:]
+        Layout (must match observation_space declared in __init__):
+         [0:10]: sensordata  — IMU: gyro[3] + accelerometer[3] + orientation quat[4]
+        [10:22]: qpos[7:19]  — 12 joint angles (servo readbacks)
 
-        if self._include_cfrc_ext_in_observation:
-            contact_force = self.contact_forces[1:].flatten()
-            return np.concatenate((position, velocity, contact_force))
-        else:
-            return np.concatenate((position, velocity))
+        Excluded by design (privileged sim state, not on hardware):
+        qpos[0:3]  base xyz position
+        qpos[3:7]  base orientation (already have it via the quat sensor)
+        qvel[*]    all velocities (base linear + joint angular)
+        cfrc_ext   contact forces
+        These may feed the reward (sim-only) but never the policy input.
+        """
+
+        sensor = self.data.sensordata          # 10: gyro + accel + quat
+        joint_angles = self.data.qpos[7:19]    # 12 servo angles
+        return np.concatenate([sensor, joint_angles])
 
     def reset_model(self):
+        
         noise_low = -self._reset_noise_scale
         noise_high = self._reset_noise_scale
-
-        qpos = self.init_qpos + self.np_random.uniform(
+        # ── Initial pose ───────────────────────────────────────────────────────────────
+        key = self.model.key("stand")
+        key_qpos = key.qpos.copy()
+        key_qvel = key.qvel.copy()
+        qpos = key_qpos + self.np_random.uniform(
             low=noise_low, high=noise_high, size=self.model.nq
         )
         qvel = (
-            self.init_qvel
+            key_qvel
             + self._reset_noise_scale * self.np_random.standard_normal(self.model.nv)
         )
         self.set_state(qpos, qvel)
 
         observation = self._get_obs()
+
+        self.previous_action = np.zeros(self.model.nu)
 
         return observation
 

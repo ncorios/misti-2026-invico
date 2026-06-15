@@ -7,12 +7,11 @@ from gymnasium.wrappers import TimeLimit
 from dogzilla_env import DogEnv
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-XML_PATH = os.path.join(HERE, "ppo_dog.xml")     # resolved relative to this file
 MODEL_DIR = os.path.join(HERE, "models")
 
 
 def make_env():
-    env = DogEnv(xml_file=XML_PATH)
+    env = DogEnv()
     env = TimeLimit(env, max_episode_steps=1000)
     return env
 
@@ -38,7 +37,7 @@ def train(version, total_timesteps=1_000_000, n_envs=None):
     save_path = os.path.join(MODEL_DIR, f"dog_ppo_v{version}")
     model.save(save_path)
     print(f"\nsaved model to {save_path}.zip")
-    print("decide if it's worth evaluating, then run:  python ppo_log.py", version)
+    print("decide if its worth evaluating, then run python3 controllers/ppo/ppo_log.py", version)
 
 
 if __name__ == "__main__":
