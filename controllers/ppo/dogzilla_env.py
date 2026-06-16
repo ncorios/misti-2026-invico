@@ -56,9 +56,12 @@ total = forward_reward + healthy_reward - smoothness_cost
 - forward_reward: w_forward * base_x_velocity, where base_x_velocity is the x
   displacement of the `base` body over dt. Rewards walking forward.
 - healthy_reward: constant per timestep while the robot is healthy (upright).
+-stability_reward:
 - smoothness_cost: w_smooth * sum((action - prev_action)^2). Penalizes jerky
   changes in joint targets, not action magnitude — magnitude penalties would
   punish the nonzero neutral stand pose (0, 0.65, -1.10 per leg).
+- turning_cost:
+
 
 Weights are tuned for this robot's scale (base height ~0.108 m, gram-scale links);
 Ant's default weights do not transfer and are not used.
@@ -114,11 +117,13 @@ on velocities, so each episode starts slightly varied around the standing pose.
         default_camera_config: dict[str, float | int] = DEFAULT_CAMERA_CONFIG,
         forward_reward_weight: float = 5.0,
         smoothness_cost_weight: float = 0.01,
-        healthy_reward: float = 1.0,
+        healthy_reward_weight: float = 2.0,
+        stability_reward_weight: float = 1,
+        turning_cost_weight: float = .5,
         main_body: int | str = "base",
         terminate_when_unhealthy: bool = True,
         healthy_z_range: tuple[float, float] = (0.05, 0.17),
-        reset_noise_scale: float = 0.00,
+        reset_noise_scale: float = 0.02,
         upright_threshold: float = 0.5,
         **kwargs,
     ):
@@ -129,7 +134,9 @@ on velocities, so each episode starts slightly varied around the standing pose.
             default_camera_config,
             forward_reward_weight,
             smoothness_cost_weight,
-            healthy_reward,
+            healthy_reward_weight,
+            stability_reward_weight,
+            turning_cost_weight,
             main_body,
             terminate_when_unhealthy,
             healthy_z_range,
@@ -140,8 +147,9 @@ on velocities, so each episode starts slightly varied around the standing pose.
 
         self._forward_reward_weight = forward_reward_weight
         self.smoothness_cost_weight = smoothness_cost_weight
-
-        self._healthy_reward = healthy_reward
+        self.stability_reward_weight = stability_reward_weight
+        self.turning_cost_weight = turning_cost_weight
+        self._healthy_reward_weight = healthy_reward_weight
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
         self._upright_threshold = upright_threshold
@@ -187,14 +195,33 @@ on velocities, so each episode starts slightly varied around the standing pose.
            "joint_angles": self.model.nu
         }
 
+   
+
     @property
     def healthy_reward(self):
-        return self.is_healthy * self._healthy_reward
+        return  self.is_healthy * self._healthy_reward_weight
 
     def smoothness_cost(self, action):
         smoothness_cost = self.smoothness_cost_weight * np.sum(np.square(action - self.previous_action))
         return smoothness_cost
-
+    
+    @property
+    def stability_cost(self):
+        # reward staying level: up-axis world-z is 1.0 upright, drops as it tilts.
+        # penalize the deviation (1 - up_z) so the policy is continuously nudged upright,
+        # not just terminated once it's already fallen.
+        quat = self.data.qpos[3:7]
+        up = np.zeros(3)
+        mujoco.mju_rotVecQuat(up, np.array([0.0, 0.0, 1.0]), quat)
+        deviation = 1.0 - up[2]          # 0 when level, grows toward 2 when flipped
+        return self.stability_reward_weight * deviation
+    
+    @property
+    def turning_cost(self):
+        # circling = rotating the heading, not drifting sideways. Penalize yaw rate.
+        # gyro is sensordata[0:3] (body-frame angular velocity); index 2 ≈ yaw (about up-axis)
+        yaw_rate = self.data.sensordata[2]
+        return self.turning_cost_weight * abs(yaw_rate)
 
     @property
     def is_healthy(self):
@@ -209,6 +236,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
         orientation_check = up[2] > self._upright_threshold
 
         return height_check and orientation_check
+    
 
     def step(self, action):
         joint_target = self._initial_pose + action
@@ -220,7 +248,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
         x_velocity, y_velocity = xy_velocity
 
         observation = self._get_obs()
-        reward, reward_info = self._get_rew(x_velocity, action)
+        reward, reward_info = self._get_rew(x_velocity, y_velocity, action)
         terminated = (not self.is_healthy) and self._terminate_when_unhealthy
         info = {
             "x_position": self.data.qpos[0],
@@ -237,13 +265,15 @@ on velocities, so each episode starts slightly varied around the standing pose.
         self.previous_action = action
         return observation, reward, terminated, False, info
 
-    def _get_rew(self, x_velocity: float, action):
+    def _get_rew(self, x_velocity: float, y_velocity:float, action):
         forward_reward = x_velocity * self._forward_reward_weight
-        healthy_reward = self.healthy_reward
-        rewards = forward_reward + healthy_reward
+        healthy_reward = self.healthy_reward 
+        rewards = forward_reward + healthy_reward 
 
         smoothness_cost = self.smoothness_cost(action)
-        costs = smoothness_cost
+        turning_cost = self.turning_cost
+        stability_cost = self.stability_cost
+        costs = smoothness_cost + turning_cost + stability_cost
 
         reward = rewards - costs
 
@@ -251,6 +281,8 @@ on velocities, so each episode starts slightly varied around the standing pose.
             "reward_forward": forward_reward,
             "reward_smoothness": -smoothness_cost,
             "reward_survive": healthy_reward,
+            "reward_stability": -stability_cost,
+            "reward_turning": -turning_cost
         }
 
         return reward, reward_info
