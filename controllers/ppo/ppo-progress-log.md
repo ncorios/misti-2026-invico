@@ -78,3 +78,5 @@ match kp/damping → not from a spec, but yes via system identification against 
 get weights and everything in xml as close to real robot as possible
 
 masses,dynamics, inertia, etc are all approximate in the xml. fine for comparison/validation, need to ground for sim2real.
+
+action space is prob too big rn. instant instability
