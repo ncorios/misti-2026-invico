@@ -13,54 +13,71 @@ EVAL_DIR = os.path.join(HERE, "ppo_eval")
 SUMMARY_CSV = os.path.join(EVAL_DIR, "summary.csv")
 
 
-def evaluate(version, n_steps=1000, record=True):
-    """Roll out saved model dog_ppo_v{version} once. Writes video + metrics
-    into ppo_eval/v{version}/, appends a row to summary.csv. One rollout feeds
-    both the video and the numbers."""
-    model_path = os.path.join(MODEL_DIR, f"dog_ppo_v{version}")
-    version_dir = os.path.join(EVAL_DIR, f"v{version}")
-    os.makedirs(version_dir, exist_ok=True)
-
-    env = DogEnv(render_mode="rgb_array")
-    if record:
-        env = RecordVideo(
-            env,
-            video_folder=version_dir,
-            name_prefix=f"dog_ppo_v{version}",
-            episode_trigger=lambda ep: True,
-        )
-
-    model = PPO.load(model_path)
-
+def _rollout(model, env, n_steps):
+    """One episode. Returns (distance, steps, total_reward)."""
     obs, _ = env.reset()
     positions, rewards = [], []
     for _ in range(n_steps):
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, info = env.step(action)
-        # privileged sim state — fine for eval, never in the policy obs.
-        # qpos[0] = base x-position. VERIFY this index matches your model.
         positions.append(float(env.unwrapped.data.qpos[0]))
         rewards.append(float(reward))
         if terminated or truncated:
             break
-    env.close()   # finalizes the mp4 — mandatory
+    distance = positions[-1] - positions[0] if positions else 0.0
+    return distance, len(positions), sum(rewards)
 
-    steps = len(positions)
-    distance = positions[-1] - positions[0]
+
+def evaluate(version, n_episodes=10, n_steps=1000, record=True):
+    """Evaluate dog_ppo_v{version} over n_episodes. Records ONE video,
+    averages metrics over all episodes, writes metrics.json + summary.csv row."""
+    model_path = os.path.join(MODEL_DIR, f"dog_ppo_v{version}")
+    version_dir = os.path.join(EVAL_DIR, f"v{version}")
+    os.makedirs(version_dir, exist_ok=True)
+
+    model = PPO.load(model_path)
+
+    # --- one recorded episode for the video ---
+    if record:
+        rec_env = DogEnv(render_mode="rgb_array")
+        rec_env = RecordVideo(
+            rec_env,
+            video_folder=version_dir,
+            name_prefix=f"dog_ppo_v{version}",
+            episode_trigger=lambda ep: True,
+        )
+        _rollout(model, rec_env, n_steps)
+        rec_env.close()   # finalizes the mp4
+
+    # --- n_episodes silent rollouts for statistics ---
+    eval_env = DogEnv()  # no rendering, fast
+    distances, step_counts, total_rewards = [], [], []
+    for _ in range(n_episodes):
+        d, s, r = _rollout(model, eval_env, n_steps)
+        distances.append(d)
+        step_counts.append(s)
+        total_rewards.append(r)
+    eval_env.close()
+
+    distances = np.array(distances)
+    step_counts = np.array(step_counts)
+    fell_count = int(np.sum(step_counts < n_steps))
+
     metrics = {
         "version": version,
-        "distance_m": round(distance, 4),
-        "steps_survived": steps,
-        "fell_early": steps < n_steps,
-        "total_reward": round(sum(rewards), 2),
-        "mean_reward": round(float(np.mean(rewards)), 4),
+        "n_episodes": n_episodes,
+        "distance_mean": round(float(distances.mean()), 4),
+        "distance_std": round(float(distances.std()), 4),
+        "steps_mean": round(float(step_counts.mean()), 1),
+        "steps_std": round(float(step_counts.std()), 1),
+        "fell_count": fell_count,            # how many of N episodes fell early
+        "survival_rate": round(1 - fell_count / n_episodes, 2),
+        "reward_mean": round(float(np.mean(total_rewards)), 2),
     }
 
-    # per-version metrics.json
     with open(os.path.join(version_dir, "metrics.json"), "w") as f:
         json.dump(metrics, f, indent=2)
 
-    # append to rolling summary.csv (write header if file is new)
     write_header = not os.path.exists(SUMMARY_CSV)
     with open(SUMMARY_CSV, "a", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(metrics.keys()))
@@ -68,9 +85,10 @@ def evaluate(version, n_steps=1000, record=True):
             writer.writeheader()
         writer.writerow(metrics)
 
-    print(f"v{version}: {distance:.3f} m over {steps} steps "
-          f"({'fell early' if steps < n_steps else 'full episode'}), "
-          f"reward {sum(rewards):.1f}")
+    print(f"v{version} over {n_episodes} eps: "
+          f"dist {distances.mean():.3f} ± {distances.std():.3f} m, "
+          f"steps {step_counts.mean():.0f} ± {step_counts.std():.0f}, "
+          f"survived {metrics['survival_rate']*100:.0f}% of episodes")
     print(f"  -> {version_dir}")
     return metrics
 
@@ -80,6 +98,10 @@ if __name__ == "__main__":
     os.makedirs(EVAL_DIR, exist_ok=True)
     parser = argparse.ArgumentParser()
     parser.add_argument("version")
+    parser.add_argument("--episodes", type=int, default=10)
     parser.add_argument("--no-video", action="store_true")
     args = parser.parse_args()
-    evaluate(args.version, record=not args.no_video)
+    evaluate(args.version, n_episodes=args.episodes, record=not args.no_video)
+
+    # copy and paste to run, add version at end (optional: --episodes N, --no-video):
+    # python3 controllers/ppo/ppo_log.py

@@ -79,4 +79,6 @@ get weights and everything in xml as close to real robot as possible
 
 masses,dynamics, inertia, etc are all approximate in the xml. fine for comparison/validation, need to ground for sim2real.
 
-action space is prob too big rn. instant instability
+action space is prob too big rn. instant instability. switch to resiudal action space
+
+BANG! v8 walks. goes in circles. next, penalize lateral yaw drift or reward moving in the forward facing direction.
