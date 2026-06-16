@@ -151,6 +151,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
 
         self._reset_noise_scale = reset_noise_scale
 
+       
 
         MujocoEnv.__init__(
             self,
@@ -160,6 +161,9 @@ on velocities, so each episode starts slightly varied around the standing pose.
             default_camera_config=default_camera_config,
             **kwargs,
         )
+
+        self._initial_pose = self.model.key("stand").qpos[7:19].copy()  # 12 joint angles
+        self.action_space = Box(low=-0.3, high=0.3, shape=(self.model.nu,), dtype=np.float32) # action space limited to residual 
 
         self.metadata = {
             "render_modes": [
@@ -207,8 +211,9 @@ on velocities, so each episode starts slightly varied around the standing pose.
         return height_check and orientation_check
 
     def step(self, action):
+        joint_target = self._initial_pose + action
         xy_position_before = self.data.body(self._main_body).xpos[:2].copy()
-        self.do_simulation(action, self.frame_skip)
+        self.do_simulation(joint_target, self.frame_skip)
         xy_position_after = self.data.body(self._main_body).xpos[:2].copy()
 
         xy_velocity = (xy_position_after - xy_position_before) / self.dt
@@ -299,3 +304,6 @@ on velocities, so each episode starts slightly varied around the standing pose.
             "y_position": self.data.qpos[1],
             "distance_from_origin": np.linalg.norm(self.data.qpos[0:2], ord=2),
         }
+    
+
+
