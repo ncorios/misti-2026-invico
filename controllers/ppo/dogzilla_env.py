@@ -25,14 +25,15 @@ reward, and termination redefined for the real DOGZILLA S2 hardware so a trained
 policy targets only quantities the physical robot can measure or command.
 
 ## Action Space
-Box(-1.57, 1.57, (12,), float32). Each action is a target joint angle (radians)
-sent to a position actuator (the XML uses <position> actuators, kp=35 for hip,
-kp=55 for upper/lower). Actions map to joints in actuator order:
-LF(hip, upper, lower), RF(hip, upper, lower), LH(hip, upper, lower), RH(hip, upper, lower).
+Box(-0.3, 0.3, (12,), float32). Each action is a RESIDUAL offset (radians) added to
+the stand pose, not an absolute target. The actual joint target sent to the position
+actuator is stand_pose + action, so action=0 holds the stable standing pose. This
+centers exploration on a known-stable configuration. Range chosen small (~17 deg/joint)
+so random exploration jitters around standing rather than flailing to extremes.
 
 This is position control, not torque control: the policy commands where each joint
 should go, and MuJoCo's position actuator (mirroring the real servo's onboard loop)
-drives it there. Range matches the joints' ctrlrange of [-1.57, 1.57].
+drives it there.
 
 ## Observation Space
 Box(-inf, inf, (22,), float64). Every element is something the real DOGZILLA can
@@ -51,17 +52,20 @@ velocities, and contact forces. These may appear in the reward (sim-only at trai
 time) but never in the observation.
 
 ## Rewards
-total = forward_reward + healthy_reward - smoothness_cost
+total = forward_reward + healthy_reward - smoothness_cost - turning_cost
+        - stability_cost - y_drift_cost
 
-- forward_reward: w_forward * base_x_velocity, where base_x_velocity is the x
-  displacement of the `base` body over dt. Rewards walking forward.
-- healthy_reward: constant per timestep while the robot is healthy (upright).
--stability_reward:
+- forward_reward: w_forward * base_x_velocity. Rewards forward (+x) progress.
+- healthy_reward: w_healthy per timestep while healthy (upright and at height).
 - smoothness_cost: w_smooth * sum((action - prev_action)^2). Penalizes jerky
-  changes in joint targets, not action magnitude — magnitude penalties would
-  punish the nonzero neutral stand pose (0, 0.65, -1.10 per leg).
-- turning_cost:
-
+  changes in residual joint targets, not action magnitude.
+- stability_cost: w_stability * (1 - up_z). Continuous penalty on torso tilt — nudges
+  the policy toward level, shaping the approach to falling (not just terminating).
+- turning_cost: w_turning * |yaw_rate| (gyro). Penalizes spinning the heading. Inert
+  at weight 0 by default (kept for logging/comparison).
+- y_drift_cost: w_y_drift * |y_position|. Restoring force toward the x-axis — penalizes
+  being off-center in y, so RETURNING to center reduces cost (rewards correcting a
+  drifted heading rather than punishing the turn). The straightness lever.
 
 Weights are tuned for this robot's scale (base height ~0.108 m, gram-scale links);
 Ant's default weights do not transfer and are not used.
@@ -74,13 +78,11 @@ rather than an all-zeros pose it never holds.
 ## Episode End
 ### Termination
 The episode terminates when the robot is unhealthy: base height outside
-[BASE_Z_MIN, BASE_Z_MAX] (a fallen dog's base drops near the floor), or any state
-value non-finite. [Optionally also: roll/pitch beyond a tip-over threshold from the
-framequat sensor.]
+[BASE_Z_MIN, BASE_Z_MAX], tilt past the upright threshold (rotate up-axis, check
+world-z), or any state value non-finite.
 
 ### Truncation
-Episode length capped at [MAX_EPISODE_STEPS] timesteps (via TimeLimit wrapper or
-registration).
+Episode length capped at MAX_EPISODE_STEPS timesteps (via TimeLimit wrapper).
 
 ## Reset
 The robot is reset to the "stand" keyframe defined in the XML model:
@@ -94,8 +96,6 @@ The robot is reset to the "stand" keyframe defined in the XML model:
 qpos layout: base position (x, y, z = 0, 0, 0.108), base orientation quaternion
 (w,x,y,z = 1,0,0,0, i.e. level), then 12 joint angles (hip, upper, lower) per leg
 in order LF, RF, LH, RH — each leg holds (0, 0.65, -1.10) to stand.
-
-qvel: linear torso velocites, joint angular velocities. 0 for standing keyframe, called anyways.
 
 Adds noise (scaled by reset_noise_scale): uniform on joint positions, Gaussian
 on velocities, so each episode starts slightly varied around the standing pose.
@@ -118,8 +118,9 @@ on velocities, so each episode starts slightly varied around the standing pose.
         forward_reward_weight: float = 5.0,
         smoothness_cost_weight: float = 0.01,
         healthy_reward_weight: float = 2.0,
-        stability_reward_weight: float = 1,
-        turning_cost_weight: float = .5,
+        stability_reward_weight: float = 0,
+        turning_cost_weight: float = 0,
+        y_drift_cost_weight: float = 0,
         main_body: int | str = "base",
         terminate_when_unhealthy: bool = True,
         healthy_z_range: tuple[float, float] = (0.05, 0.17),
@@ -137,6 +138,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
             healthy_reward_weight,
             stability_reward_weight,
             turning_cost_weight,
+            y_drift_cost_weight,
             main_body,
             terminate_when_unhealthy,
             healthy_z_range,
@@ -149,6 +151,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
         self.smoothness_cost_weight = smoothness_cost_weight
         self.stability_reward_weight = stability_reward_weight
         self.turning_cost_weight = turning_cost_weight
+        self.y_drift_cost_weight = y_drift_cost_weight
         self._healthy_reward_weight = healthy_reward_weight
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
@@ -158,8 +161,6 @@ on velocities, so each episode starts slightly varied around the standing pose.
         self._main_body = main_body
 
         self._reset_noise_scale = reset_noise_scale
-
-       
 
         MujocoEnv.__init__(
             self,
@@ -171,7 +172,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
         )
 
         self._initial_pose = self.model.key("stand").qpos[7:19].copy()  # 12 joint angles
-        self.action_space = Box(low=-0.3, high=0.3, shape=(self.model.nu,), dtype=np.float32) # action space limited to residual 
+        self.action_space = Box(low=-0.3, high=0.3, shape=(self.model.nu,), dtype=np.float32)  # residual
 
         self.metadata = {
             "render_modes": [
@@ -184,44 +185,49 @@ on velocities, so each episode starts slightly varied around the standing pose.
         }
 
         obs_size = self.data.sensordata.size + self.model.nu
-        
 
         self.observation_space = Box(
             low=-np.inf, high=np.inf, shape=(obs_size,), dtype=np.float64
         )
 
         self.observation_structure = {
-           "sensordata": self.data.sensordata.size, # 10: gyro + accel + fusion
-           "joint_angles": self.model.nu
+            "sensordata": self.data.sensordata.size,  # 10: gyro + accel + fusion
+            "joint_angles": self.model.nu,
         }
-
-   
 
     @property
     def healthy_reward(self):
-        return  self.is_healthy * self._healthy_reward_weight
+        return self.is_healthy * self._healthy_reward_weight
 
     def smoothness_cost(self, action):
         smoothness_cost = self.smoothness_cost_weight * np.sum(np.square(action - self.previous_action))
         return smoothness_cost
-    
+
     @property
     def stability_cost(self):
-        # reward staying level: up-axis world-z is 1.0 upright, drops as it tilts.
-        # penalize the deviation (1 - up_z) so the policy is continuously nudged upright,
-        # not just terminated once it's already fallen.
+        # penalize torso tilt: up-axis world-z is 1.0 upright, drops as it tilts.
+        # continuous nudge toward level, not just termination once already fallen.
         quat = self.data.qpos[3:7]
         up = np.zeros(3)
         mujoco.mju_rotVecQuat(up, np.array([0.0, 0.0, 1.0]), quat)
         deviation = 1.0 - up[2]          # 0 when level, grows toward 2 when flipped
         return self.stability_reward_weight * deviation
-    
+
     @property
     def turning_cost(self):
-        # circling = rotating the heading, not drifting sideways. Penalize yaw rate.
-        # gyro is sensordata[0:3] (body-frame angular velocity); index 2 ≈ yaw (about up-axis)
+        # circling = rotating the heading. Penalize yaw rate.
+        # gyro is sensordata[0:3] (body-frame angular velocity); index 2 ~= yaw.
+        # Inert at weight 0 by default; kept for logging/comparison.
         yaw_rate = self.data.sensordata[2]
         return self.turning_cost_weight * abs(yaw_rate)
+
+    @property
+    def y_drift_cost(self):
+        # restoring force toward the x-axis: penalize being off-center in y.
+        # position-based (not velocity) so returning toward center REDUCES cost —
+        # rewards correcting a drifted heading instead of punishing the turn.
+        y_position = self.data.qpos[1]
+        return self.y_drift_cost_weight * abs(y_position)
 
     @property
     def is_healthy(self):
@@ -236,7 +242,6 @@ on velocities, so each episode starts slightly varied around the standing pose.
         orientation_check = up[2] > self._upright_threshold
 
         return height_check and orientation_check
-    
 
     def step(self, action):
         joint_target = self._initial_pose + action
@@ -265,15 +270,16 @@ on velocities, so each episode starts slightly varied around the standing pose.
         self.previous_action = action
         return observation, reward, terminated, False, info
 
-    def _get_rew(self, x_velocity: float, y_velocity:float, action):
+    def _get_rew(self, x_velocity: float, y_velocity: float, action):
         forward_reward = x_velocity * self._forward_reward_weight
-        healthy_reward = self.healthy_reward 
-        rewards = forward_reward + healthy_reward 
+        healthy_reward = self.healthy_reward
+        rewards = forward_reward + healthy_reward
 
         smoothness_cost = self.smoothness_cost(action)
         turning_cost = self.turning_cost
         stability_cost = self.stability_cost
-        costs = smoothness_cost + turning_cost + stability_cost
+        y_drift_cost = self.y_drift_cost
+        costs = smoothness_cost + turning_cost + stability_cost + y_drift_cost
 
         reward = rewards - costs
 
@@ -282,7 +288,8 @@ on velocities, so each episode starts slightly varied around the standing pose.
             "reward_smoothness": -smoothness_cost,
             "reward_survive": healthy_reward,
             "reward_stability": -stability_cost,
-            "reward_turning": -turning_cost
+            "reward_turning": -turning_cost,
+            "reward_y_drift": -y_drift_cost,
         }
 
         return reward, reward_info
@@ -308,7 +315,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
         return np.concatenate([sensor, joint_angles])
 
     def reset_model(self):
-        
+
         noise_low = -self._reset_noise_scale
         noise_high = self._reset_noise_scale
         # ── Initial pose ───────────────────────────────────────────────────────────────
@@ -336,6 +343,3 @@ on velocities, so each episode starts slightly varied around the standing pose.
             "y_position": self.data.qpos[1],
             "distance_from_origin": np.linalg.norm(self.data.qpos[0:2], ord=2),
         }
-    
-
-

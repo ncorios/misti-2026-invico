@@ -82,3 +82,5 @@ masses,dynamics, inertia, etc are all approximate in the xml. fine for compariso
 action space is prob too big rn. instant instability. switch to resiudal action space
 
 BANG! v8 walks. goes in circles. next, penalize lateral yaw drift or reward moving in the forward facing direction.
+
+i added yaw and stability costs. somehow made it worse lol. switched to a more robuste val bc the one episode eval before was making me think the model was bad when it wasnt.
