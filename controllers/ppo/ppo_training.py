@@ -4,19 +4,22 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.logger import configure
 from gymnasium.wrappers import TimeLimit
 from dogzilla_env import DogEnv
 
 
 
 class RewardTermsCallback(BaseCallback):
-    """Logs reward_forward, reward_survive, reward_smoothness to TensorBoard."""
-    
+    """Logs all five reward terms to TensorBoard."""
+
     def __init__(self):
         super().__init__()
         self._ep_reward_forward = []
         self._ep_reward_survive = []
         self._ep_reward_smoothness = []
+        self._ep_reward_stability = []
+        self._ep_reward_turning = []
 
     def _on_step(self) -> bool:
         for info in self.locals["infos"]:
@@ -24,19 +27,22 @@ class RewardTermsCallback(BaseCallback):
                 self._ep_reward_forward.append(info["reward_forward"])
                 self._ep_reward_survive.append(info["reward_survive"])
                 self._ep_reward_smoothness.append(info["reward_smoothness"])
+                self._ep_reward_stability.append(info["reward_stability"])
+                self._ep_reward_turning.append(info["reward_turning"])
         return True
 
     def _on_rollout_end(self) -> None:
         if self._ep_reward_forward:
-            self.logger.record("reward/forward", 
-                np.mean(self._ep_reward_forward))
-            self.logger.record("reward/survive",  
-                np.mean(self._ep_reward_survive))
-            self.logger.record("reward/smoothness",
-                np.mean(self._ep_reward_smoothness))
+            self.logger.record("reward/forward",    np.mean(self._ep_reward_forward))
+            self.logger.record("reward/survive",    np.mean(self._ep_reward_survive))
+            self.logger.record("reward/smoothness", np.mean(self._ep_reward_smoothness))
+            self.logger.record("reward/stability",  np.mean(self._ep_reward_stability))
+            self.logger.record("reward/turning",    np.mean(self._ep_reward_turning))
             self._ep_reward_forward.clear()
             self._ep_reward_survive.clear()
             self._ep_reward_smoothness.clear()
+            self._ep_reward_stability.clear()
+            self._ep_reward_turning.clear()
         
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(HERE, "models")
@@ -62,8 +68,8 @@ def train(version, total_timesteps=1_000_000, n_envs=None):
         n_steps=2048,
         batch_size=256,
         verbose=1,
-        tensorboard_log=os.path.join(HERE, "tb_logs"),
     )
+    model.set_logger(configure(os.path.join(HERE, "tb_logs", f"v{version}"), ["stdout", "tensorboard"]))
     callback = RewardTermsCallback()
     model.learn(total_timesteps=total_timesteps, callback=callback)
 

@@ -13,13 +13,15 @@ MODEL_DIR = os.path.join(HERE, "models")
 
 
 class RewardTermsCallback(BaseCallback):
-    """Logs reward_forward, reward_survive, reward_smoothness to TensorBoard."""
+    """Logs all five reward terms to TensorBoard."""
 
     def __init__(self):
         super().__init__()
         self._ep_reward_forward = []
         self._ep_reward_survive = []
         self._ep_reward_smoothness = []
+        self._ep_reward_stability = []
+        self._ep_reward_turning = []
 
     def _on_step(self) -> bool:
         for info in self.locals["infos"]:
@@ -27,16 +29,22 @@ class RewardTermsCallback(BaseCallback):
                 self._ep_reward_forward.append(info["reward_forward"])
                 self._ep_reward_survive.append(info["reward_survive"])
                 self._ep_reward_smoothness.append(info["reward_smoothness"])
+                self._ep_reward_stability.append(info["reward_stability"])
+                self._ep_reward_turning.append(info["reward_turning"])
         return True
 
     def _on_rollout_end(self) -> None:
         if self._ep_reward_forward:
-            self.logger.record("reward/forward", np.mean(self._ep_reward_forward))
-            self.logger.record("reward/survive", np.mean(self._ep_reward_survive))
+            self.logger.record("reward/forward",    np.mean(self._ep_reward_forward))
+            self.logger.record("reward/survive",    np.mean(self._ep_reward_survive))
             self.logger.record("reward/smoothness", np.mean(self._ep_reward_smoothness))
+            self.logger.record("reward/stability",  np.mean(self._ep_reward_stability))
+            self.logger.record("reward/turning",    np.mean(self._ep_reward_turning))
             self._ep_reward_forward.clear()
             self._ep_reward_survive.clear()
             self._ep_reward_smoothness.clear()
+            self._ep_reward_stability.clear()
+            self._ep_reward_turning.clear()
 
 
 def make_env():
@@ -56,7 +64,7 @@ def warmstart(from_version, to_version, total_timesteps=2_000_000, n_envs=None):
     model = PPO.load(load_path, env=vec_env)
 
     
-    model.set_logger(configure(os.path.join(HERE, "tb_logs"), ["stdout", "tensorboard"]))
+    model.set_logger(configure(os.path.join(HERE, "tb_logs", f"v{to_version}"), ["stdout", "tensorboard"]))
 
     callback = RewardTermsCallback()
     model.learn(

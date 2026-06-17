@@ -30,7 +30,7 @@
     <geom name="floor"
           type="plane"
           pos="0 0 0"
-          size="5 5 0.1"
+          size="20 20 0.1"
           rgba="1 1 1 1"
           contype="1"
           conaffinity="1"
@@ -38,6 +38,7 @@
 
     <body name="base" pos="0 0 0.108">
       <freejoint/>
+      <camera name="track" mode="trackcom" pos="0 -1.5 0.5" xyaxes="1 0 0 0 1 2"/>
       <!-- added a site for the imu on the robot to sit for sensor data -->
       <site name="imu_site" pos="0 0 0.02" size="0.01"/>
 
