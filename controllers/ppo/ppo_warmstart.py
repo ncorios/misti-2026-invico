@@ -22,6 +22,7 @@ class RewardTermsCallback(BaseCallback):
         self._ep_reward_smoothness = []
         self._ep_reward_stability = []
         self._ep_reward_turning = []
+        self._ep_reward_y_drift = []
 
     def _on_step(self) -> bool:
         for info in self.locals["infos"]:
@@ -31,6 +32,7 @@ class RewardTermsCallback(BaseCallback):
                 self._ep_reward_smoothness.append(info["reward_smoothness"])
                 self._ep_reward_stability.append(info["reward_stability"])
                 self._ep_reward_turning.append(info["reward_turning"])
+                self._ep_reward_y_drift.append(info["reward_y_drift"])
         return True
 
     def _on_rollout_end(self) -> None:
@@ -40,11 +42,13 @@ class RewardTermsCallback(BaseCallback):
             self.logger.record("reward/smoothness", np.mean(self._ep_reward_smoothness))
             self.logger.record("reward/stability",  np.mean(self._ep_reward_stability))
             self.logger.record("reward/turning",    np.mean(self._ep_reward_turning))
+            self.logger.record("reward/y_drift",    np.mean(self._ep_reward_y_drift))
             self._ep_reward_forward.clear()
             self._ep_reward_survive.clear()
             self._ep_reward_smoothness.clear()
             self._ep_reward_stability.clear()
             self._ep_reward_turning.clear()
+            self._ep_reward_y_drift.clear()
 
 
 def make_env():
