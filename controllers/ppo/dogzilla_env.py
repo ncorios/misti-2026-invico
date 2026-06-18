@@ -228,6 +228,36 @@ on velocities, so each episode starts slightly varied around the standing pose.
         # rewards correcting a drifted heading instead of punishing the turn.
         y_position = self.data.qpos[1]
         return self.y_drift_cost_weight * abs(y_position)
+    
+    @property
+    def asymmetry_cost(self):
+        """
+
+        Absolute qpos index / relative index within the 12-joint block:
+            qpos[7]  (0)  LF hip     qpos[10] (3)  RF hip
+            qpos[8]  (1)  LF upper   qpos[11] (4)  RF upper
+            qpos[9]  (2)  LF lower   qpos[12] (5)  RF lower
+            qpos[13] (6)  LH hip     qpos[16] (9)  RH hip
+            qpos[14] (7)  LH upper   qpos[17] (10) RH upper
+            qpos[15] (8)  LH lower   qpos[18] (11) RH lower
+
+        MIRROR PAIRS (compare these for symmetry):
+            front:  LF (0,1,2) <-> RF (3,4,5)
+            rear:   LH (6,7,8) <-> RH (9,10,11)
+
+        !! SIGN-FLIP WARNING — symmetric means MIRRORED, not EQUAL !!
+        The hip joint axes are flipped left vs right in the XML:
+            LF/LH hip axis = "-1 0 0" / "1 0 0"  (opposite)
+            upper/lower leg axis = "0 1 0"        (same both sides)
+        So a symmetric pose has:
+            hips:        LF_hip  ~= -RF_hip   (sign flip)
+            upper/lower: LF_upper ~= RF_upper (direct)
+        Comparing hips directly (LF_hip == RF_hip) would penalize the CORRECT
+        symmetric gait. Apply the sign flip on the hip joints only.
+        (VERIFY axis signs against the live model before trusting this.)
+        """
+        # implementation 
+        raise NotImplementedError
 
     @property
     def is_healthy(self):
@@ -325,6 +355,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
         qpos = key_qpos + self.np_random.uniform(
             low=noise_low, high=noise_high, size=self.model.nq
         )
+        qpos[0:3] = key_qpos[0:3]  # base xyz fixed to keyframe; noise only on quat + joints
         qvel = (
             key_qvel
             + self._reset_noise_scale * self.np_random.standard_normal(self.model.nv)

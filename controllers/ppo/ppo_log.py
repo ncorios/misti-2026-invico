@@ -1,6 +1,9 @@
 import os
 import csv
 import json
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import numpy as np
 from stable_baselines3 import PPO
 from gymnasium.wrappers import RecordVideo
@@ -19,6 +22,55 @@ CSV_FIELDS = [
     "stoch_distance_mean", "stoch_distance_std", "stoch_steps_mean", "stoch_steps_std",
     "stoch_fell_count", "stoch_survival_rate", "stoch_reward_mean",
 ]
+
+
+def _collect_paths(model, n_episodes, n_steps, deterministic):
+    """Run n_episodes, return list of (xs, ys) per episode."""
+    env = DogEnv()
+    paths = []
+    for _ in range(n_episodes):
+        obs, _ = env.reset()
+        xs = [float(env.unwrapped.data.qpos[0])]
+        ys = [float(env.unwrapped.data.qpos[1])]
+        for _ in range(n_steps):
+            action, _ = model.predict(obs, deterministic=deterministic)
+            obs, _, terminated, truncated, _ = env.step(action)
+            xs.append(float(env.unwrapped.data.qpos[0]))
+            ys.append(float(env.unwrapped.data.qpos[1]))
+            if terminated or truncated:
+                break
+        paths.append((xs, ys))
+    env.close()
+    return paths
+
+
+def _plot_trajectory(paths, version, version_dir, n_episodes):
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.set_facecolor("white")
+
+    all_xs = [x for xs, ys in paths for x in xs]
+    all_ys = [y for xs, ys in paths for y in ys]
+
+    for i, (xs, ys) in enumerate(paths):
+        ax.plot(xs, ys, color="royalblue", linewidth=1.0, alpha=0.3,
+                label=f"stochastic episodes (n={n_episodes})" if i == 0 else None)
+        ax.plot(xs[-1], ys[-1], "r.", markersize=6, alpha=0.6)
+
+    ax.plot(paths[0][0][0], paths[0][1][0], "go", markersize=8, label="start (all)")
+    ax.plot([], [], "r.", markersize=6, label="episode end")
+    ax.plot([min(all_xs), max(all_xs)], [0, 0], "--", color="gray",
+            linewidth=1, alpha=0.5, label="ideal (y=0)")
+
+    ax.set_aspect("equal")
+    ax.grid(True)
+    ax.set_xlabel("x position (m)")
+    ax.set_ylabel("y position (m)")
+    ax.set_title(f"v{version} — stochastic trajectory overlay")
+    ax.legend(loc="upper left", framealpha=0.9)
+    out = os.path.join(version_dir, f"trajectory_v{version}.png")
+    fig.savefig(out, dpi=120, bbox_inches="tight")
+    plt.close(fig)
+    return out
 
 
 def _rollout(model, env, n_steps, deterministic):
@@ -81,6 +133,9 @@ def evaluate(version, n_episodes=10, n_steps=1000, record=True):
         _rollout(model, rec_env, n_steps, deterministic=True)
         rec_env.close()
 
+    stoch_paths = _collect_paths(model, n_episodes, n_steps, deterministic=False)
+    traj_path = _plot_trajectory(stoch_paths, version, version_dir, n_episodes)
+
     det_stats   = _run_episodes(model, n_episodes, n_steps, deterministic=True)
     stoch_stats = _run_episodes(model, n_episodes, n_steps, deterministic=False)
 
@@ -124,6 +179,7 @@ def evaluate(version, n_episodes=10, n_steps=1000, record=True):
     print(f"           stochastic:   "
           f"dist {s['distance_mean']:.3f} ± {s['distance_std']:.3f} m, "
           f"survived {s['survival_rate']*100:.0f}%")
+    print(f"  trajectory -> {traj_path}")
     print(f"  -> {version_dir}")
     return metrics
 
