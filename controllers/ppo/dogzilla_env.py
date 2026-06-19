@@ -121,6 +121,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
         stability_reward_weight: float = 0,
         turning_cost_weight: float = 0,
         y_drift_cost_weight: float = 0,
+        asymmetry_cost_weight: float = .1,
         main_body: int | str = "base",
         terminate_when_unhealthy: bool = True,
         healthy_z_range: tuple[float, float] = (0.05, 0.17),
@@ -139,6 +140,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
             stability_reward_weight,
             turning_cost_weight,
             y_drift_cost_weight,
+            asymmetry_cost_weight,
             main_body,
             terminate_when_unhealthy,
             healthy_z_range,
@@ -153,6 +155,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
         self.turning_cost_weight = turning_cost_weight
         self.y_drift_cost_weight = y_drift_cost_weight
         self._healthy_reward_weight = healthy_reward_weight
+        self.asymmetry_cost_weight = asymmetry_cost_weight
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
         self._upright_threshold = upright_threshold
@@ -195,6 +198,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
             "joint_angles": self.model.nu,
         }
 
+
     @property
     def healthy_reward(self):
         return self.is_healthy * self._healthy_reward_weight
@@ -231,33 +235,24 @@ on velocities, so each episode starts slightly varied around the standing pose.
     
     @property
     def asymmetry_cost(self):
-        """
+        # qpos[7:19] layout:  LF(0,1,2)  RF(3,4,5)  LH(6,7,8)  RH(9,10,11)
+        #                     hip,upper,lower per leg
+        #
+        # SIGN-FLIP: within each L/R pair, both joints share the same axis
+        # (front hips: both [-1,0,0]; rear hips: both [+1,0,0]; upper/lower: all [0,1,0]).
+        # A symmetric pose requires hip_L = -hip_R (opposite signs) and
+        # upper_L = upper_R, lower_L = lower_R (direct). Verified empirically:
+        # stand pose -> cost=0, correct mirror -> cost=0, same-sign hips -> cost>0.
+        j = self.data.qpos[7:19]
+        LF, RF, LH, RH = j[0:3], j[3:6], j[6:9], j[9:12]
 
-        Absolute qpos index / relative index within the 12-joint block:
-            qpos[7]  (0)  LF hip     qpos[10] (3)  RF hip
-            qpos[8]  (1)  LF upper   qpos[11] (4)  RF upper
-            qpos[9]  (2)  LF lower   qpos[12] (5)  RF lower
-            qpos[13] (6)  LH hip     qpos[16] (9)  RH hip
-            qpos[14] (7)  LH upper   qpos[17] (10) RH upper
-            qpos[15] (8)  LH lower   qpos[18] (11) RH lower
+        flip = np.array([-1.0, 1.0, 1.0])  # [hip, upper, lower]
 
-        MIRROR PAIRS (compare these for symmetry):
-            front:  LF (0,1,2) <-> RF (3,4,5)
-            rear:   LH (6,7,8) <-> RH (9,10,11)
+        front_diff = LF - flip * RF
+        rear_diff  = LH - flip * RH
 
-        !! SIGN-FLIP WARNING — symmetric means MIRRORED, not EQUAL !!
-        The hip joint axes are flipped left vs right in the XML:
-            LF/LH hip axis = "-1 0 0" / "1 0 0"  (opposite)
-            upper/lower leg axis = "0 1 0"        (same both sides)
-        So a symmetric pose has:
-            hips:        LF_hip  ~= -RF_hip   (sign flip)
-            upper/lower: LF_upper ~= RF_upper (direct)
-        Comparing hips directly (LF_hip == RF_hip) would penalize the CORRECT
-        symmetric gait. Apply the sign flip on the hip joints only.
-        (VERIFY axis signs against the live model before trusting this.)
-        """
-        # implementation 
-        raise NotImplementedError
+        cost = np.sum(front_diff**2) + np.sum(rear_diff**2)
+        return self.asymmetry_cost_weight * cost
 
     @property
     def is_healthy(self):
@@ -309,7 +304,8 @@ on velocities, so each episode starts slightly varied around the standing pose.
         turning_cost = self.turning_cost
         stability_cost = self.stability_cost
         y_drift_cost = self.y_drift_cost
-        costs = smoothness_cost + turning_cost + stability_cost + y_drift_cost
+        asymmetry_cost = self.asymmetry_cost
+        costs = smoothness_cost + turning_cost + stability_cost + y_drift_cost + asymmetry_cost
 
         reward = rewards - costs
 
@@ -320,6 +316,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
             "reward_stability": -stability_cost,
             "reward_turning": -turning_cost,
             "reward_y_drift": -y_drift_cost,
+            "reward_asymmetry": -asymmetry_cost
         }
 
         return reward, reward_info

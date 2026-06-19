@@ -44,20 +44,22 @@ def _collect_paths(model, n_episodes, n_steps, deterministic):
     return paths
 
 
-def _plot_trajectory(paths, version, version_dir, n_episodes):
+def _plot_trajectory(stoch_paths, det_paths, version, version_dir, n_episodes):
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.set_facecolor("white")
 
-    all_xs = [x for xs, ys in paths for x in xs]
-    all_ys = [y for xs, ys in paths for y in ys]
+    all_xs = [x for paths in (stoch_paths, det_paths) for xs, ys in paths for x in xs]
+    all_ys = [y for paths in (stoch_paths, det_paths) for xs, ys in paths for y in ys]
 
-    for i, (xs, ys) in enumerate(paths):
-        ax.plot(xs, ys, color="royalblue", linewidth=1.0, alpha=0.3,
-                label=f"stochastic episodes (n={n_episodes})" if i == 0 else None)
-        ax.plot(xs[-1], ys[-1], "r.", markersize=6, alpha=0.6)
+    for i, (xs, ys) in enumerate(stoch_paths):
+        ax.plot(xs, ys, color="steelblue", linewidth=1.0, alpha=0.3,
+                label=f"stochastic (n={n_episodes})" if i == 0 else None)
 
-    ax.plot(paths[0][0][0], paths[0][1][0], "go", markersize=8, label="start (all)")
-    ax.plot([], [], "r.", markersize=6, label="episode end")
+    for i, (xs, ys) in enumerate(det_paths):
+        ax.plot(xs, ys, color="crimson", linewidth=2.0, alpha=0.7,
+                label=f"deterministic (n={n_episodes})" if i == 0 else None)
+
+    ax.plot(stoch_paths[0][0][0], stoch_paths[0][1][0], "go", markersize=8, label="start (all)")
     ax.plot([min(all_xs), max(all_xs)], [0, 0], "--", color="gray",
             linewidth=1, alpha=0.5, label="ideal (y=0)")
 
@@ -65,7 +67,7 @@ def _plot_trajectory(paths, version, version_dir, n_episodes):
     ax.grid(True)
     ax.set_xlabel("x position (m)")
     ax.set_ylabel("y position (m)")
-    ax.set_title(f"v{version} — stochastic trajectory overlay")
+    ax.set_title(f"v{version} — deterministic (crimson) vs stochastic (blue) overlay")
     ax.legend(loc="upper left", framealpha=0.9)
     out = os.path.join(version_dir, f"trajectory_v{version}.png")
     fig.savefig(out, dpi=120, bbox_inches="tight")
@@ -134,7 +136,8 @@ def evaluate(version, n_episodes=10, n_steps=1000, record=True):
         rec_env.close()
 
     stoch_paths = _collect_paths(model, n_episodes, n_steps, deterministic=False)
-    traj_path = _plot_trajectory(stoch_paths, version, version_dir, n_episodes)
+    det_paths   = _collect_paths(model, n_episodes, n_steps, deterministic=True)
+    traj_path = _plot_trajectory(stoch_paths, det_paths, version, version_dir, n_episodes)
 
     det_stats   = _run_episodes(model, n_episodes, n_steps, deterministic=True)
     stoch_stats = _run_episodes(model, n_episodes, n_steps, deterministic=False)
