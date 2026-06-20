@@ -101,4 +101,4 @@ if __name__ == "__main__":
     # SubprocVecEnv requires the __main__ guard — this is it
     train(args.version, total_timesteps=args.steps, n_envs=args.envs)
 
-#copy and paste to run, add version, steps, envs at end: python3 controllers/ppo/ppo_training.py
+#copy and paste to run, add version, steps, envs at end: python3 controllers/ppo/ppo_training.py 23  --steps 1000000 --envs 8

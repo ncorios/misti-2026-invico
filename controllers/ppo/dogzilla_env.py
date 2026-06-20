@@ -120,17 +120,19 @@ on velocities, so each episode starts slightly varied around the standing pose.
         frame_skip: int = 5,
         default_camera_config: dict[str, float | int] = DEFAULT_CAMERA_CONFIG,
         forward_reward_weight: float = 5.0,
-        smoothness_cost_weight: float = .01,
-        healthy_reward_weight: float = 2.0,
+        smoothness_cost_weight: float = .02,
+        healthy_reward_weight: float = 2,
         stability_reward_weight: float = 0,
         turning_cost_weight: float = 0,
-        y_drift_cost_weight: float = 0.1,
+        y_drift_cost_weight: float = 0.04,
         asymmetry_cost_weight: float = 0,
-        heading_cost_weight: float = 0.2,
+        heading_cost_weight: float = 0.3,
+        heading_lin_weight: float = 0.01,
+        heading_quad_weight: float = 0.01,
         main_body: int | str = "base",
         terminate_when_unhealthy: bool = True,
         healthy_z_range: tuple[float, float] = (0.05, 0.17),
-        reset_noise_scale: float = 0.03,
+        reset_noise_scale: float = 0.02,
         upright_threshold: float = 0.5,
         **kwargs,
     ):
@@ -147,6 +149,8 @@ on velocities, so each episode starts slightly varied around the standing pose.
             y_drift_cost_weight,
             asymmetry_cost_weight,
             heading_cost_weight,
+            heading_lin_weight,
+            heading_quad_weight,
             main_body,
             terminate_when_unhealthy,
             healthy_z_range,
@@ -160,9 +164,11 @@ on velocities, so each episode starts slightly varied around the standing pose.
         self.stability_reward_weight = stability_reward_weight
         self.turning_cost_weight = turning_cost_weight
         self.y_drift_cost_weight = y_drift_cost_weight
+        self.heading_cost_weight = heading_cost_weight
         self._healthy_reward_weight = healthy_reward_weight
         self.asymmetry_cost_weight = asymmetry_cost_weight
-        self.heading_cost_weight = heading_cost_weight
+        self.heading_lin_weight = heading_lin_weight
+        self.heading_quad_weight = heading_quad_weight
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
         self._upright_threshold = upright_threshold
@@ -261,6 +267,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
         cost = np.sum(front_diff**2) + np.sum(rear_diff**2)
         return self.asymmetry_cost_weight * cost
     
+  
     @property
     def heading_cost(self):
         # penalize the body pointing away from +x (the cause of drift: walking at an angle).
@@ -274,6 +281,43 @@ on velocities, so each episode starts slightly varied around the standing pose.
         mujoco.mju_rotVecQuat(forward, np.array([1.0, 0.0, 0.0]), quat)
         deviation = 1.0 - forward[0]      # 0 when facing +x, up to 2 when facing -x
         return self.heading_cost_weight * deviation
+
+    @property
+    def heading_cost_inactive(self):
+        """
+        Penalize heading deviation from +x — the CAUSE of drift (walking at an angle),
+        not the position symptom that y_drift chases.
+
+        yaw = atan2(forward_y, forward_x), where forward = body [1,0,0] rotated to world.
+        yaw=0 facing +x (zero cost), +/-pi facing -x. yaw ANGLE not rate: rate locks in
+        bad headings (the turning_cost mistake); angle-from-+x creates a restoring pull
+        that allows correction. Verify cost ~0 at stand pose.
+
+        STACKED (two regimes, separate weights) — supersedes the old single (1 - cos(yaw))
+        form. The old cosine cost had a gradient ~sin(yaw) that VANISHES near zero, so small
+        headings felt almost no pressure and drift stalled around ~1m. This version fixes
+        that with two terms:
+        - heading_lin_weight * |yaw|   : constant-magnitude gradient, so it keeps pulling
+                                        even at tiny errors → drives residual drift toward
+                                        zero (the part the old cos form couldn't do).
+        - heading_quad_weight * yaw**2 : gradient grows with the error, so it yanks back
+                                        hard on large strays ("leaves when far").
+
+        WEIGHT WARNING (learned the hard way): the small headings that cause ~1m drift are
+        only a few degrees, so making them costly needs a large coefficient — which then
+        DOMINATES at the larger angles seen during exploration, and the policy responds by
+        freezing in place (forward progress collapses; a 16m walker dropped to <1m). Keep
+        the combined heading cost a small fraction (~<=5-10%) of forward_reward (~5/step) at
+        the angles you actually see, and watch survival_rate. Strong straightness fights a
+        good forward gait; this term tightens drift only modestly before it breaks walking.
+        """
+        quat = self.data.qpos[3:7]
+        forward = np.zeros(3)
+        mujoco.mju_rotVecQuat(forward, np.array([1.0, 0.0, 0.0]), quat)
+        yaw = np.arctan2(forward[1], forward[0])   # signed heading error from +x
+        # |yaw|: steady pull even at small errors (keeps it tight near zero)
+        # yaw**2: escalating pull, yanks back hard when far (fixes "leaves when far")
+        return self.heading_lin_weight * abs(yaw) + self.heading_quad_weight * yaw**2
 
     @property
     def is_healthy(self):

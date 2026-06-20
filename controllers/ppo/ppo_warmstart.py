@@ -104,5 +104,5 @@ if __name__ == "__main__":
     
     # run with python3 controllers/ppo/ppo_warmstart.py _ _
     # first num version from, second num is to
-
-    # python3 controllers/ppo/ppo_warmstart.py 20 21 --steps 1000000--envs 8
+  
+    # python3 controllers/ppo/ppo_warmstart.py --steps 25000000 --envs 8 20 0
