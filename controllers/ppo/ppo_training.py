@@ -22,6 +22,7 @@ class RewardTermsCallback(BaseCallback):
         self._ep_reward_turning = []
         self._ep_reward_y_drift = []
         self._ep_reward_asymmetry = []
+        self._ep_reward_heading = []
 
     def _on_step(self) -> bool:
         for info in self.locals["infos"]:
@@ -33,6 +34,7 @@ class RewardTermsCallback(BaseCallback):
                 self._ep_reward_turning.append(info["reward_turning"])
                 self._ep_reward_y_drift.append(info["reward_y_drift"])
                 self._ep_reward_asymmetry.append(info["reward_asymmetry"])
+                self._ep_reward_heading.append(info["reward_heading"])
         return True
 
     def _on_rollout_end(self) -> None:
@@ -43,7 +45,8 @@ class RewardTermsCallback(BaseCallback):
             self.logger.record("reward/stability",  np.mean(self._ep_reward_stability))
             self.logger.record("reward/turning",    np.mean(self._ep_reward_turning))
             self.logger.record("reward/y_drift",    np.mean(self._ep_reward_y_drift))
-            self.logger.record("reward/asymmetry", np.mean(self._ep_reward_asymmetry))
+            self.logger.record("reward/asymmetry",  np.mean(self._ep_reward_asymmetry))
+            self.logger.record("reward/heading",    np.mean(self._ep_reward_heading))
             self._ep_reward_forward.clear()
             self._ep_reward_survive.clear()
             self._ep_reward_smoothness.clear()
@@ -51,6 +54,7 @@ class RewardTermsCallback(BaseCallback):
             self._ep_reward_turning.clear()
             self._ep_reward_y_drift.clear()
             self._ep_reward_asymmetry.clear()
+            self._ep_reward_heading.clear()
         
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(HERE, "models")

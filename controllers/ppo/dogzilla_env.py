@@ -53,7 +53,7 @@ time) but never in the observation.
 
 ## Rewards
 total = forward_reward + healthy_reward - smoothness_cost - turning_cost
-        - stability_cost - y_drift_cost
+        - stability_cost - y_drift_cost - heading_cost
 
 - forward_reward: w_forward * base_x_velocity. Rewards forward (+x) progress.
 - healthy_reward: w_healthy per timestep while healthy (upright and at height).
@@ -66,6 +66,10 @@ total = forward_reward + healthy_reward - smoothness_cost - turning_cost
 - y_drift_cost: w_y_drift * |y_position|. Restoring force toward the x-axis — penalizes
   being off-center in y, so RETURNING to center reduces cost (rewards correcting a
   drifted heading rather than punishing the turn). The straightness lever.
+- heading_cost: w_heading * (1 - forward_x). Penalizes the body pointing away from +x.
+  Rotates the body's forward axis [1,0,0] into the world frame; rewards its x-component
+  being ~1 (nosed straight down +x). Yaw ANGLE (not rate) — creates a restoring pull
+  toward facing forward rather than locking in a bad heading.
 
 Weights are tuned for this robot's scale (base height ~0.108 m, gram-scale links);
 Ant's default weights do not transfer and are not used.
@@ -116,16 +120,17 @@ on velocities, so each episode starts slightly varied around the standing pose.
         frame_skip: int = 5,
         default_camera_config: dict[str, float | int] = DEFAULT_CAMERA_CONFIG,
         forward_reward_weight: float = 5.0,
-        smoothness_cost_weight: float = 0.01,
+        smoothness_cost_weight: float = .01,
         healthy_reward_weight: float = 2.0,
         stability_reward_weight: float = 0,
         turning_cost_weight: float = 0,
-        y_drift_cost_weight: float = 0,
-        asymmetry_cost_weight: float = .1,
+        y_drift_cost_weight: float = 0.1,
+        asymmetry_cost_weight: float = 0,
+        heading_cost_weight: float = 0.2,
         main_body: int | str = "base",
         terminate_when_unhealthy: bool = True,
         healthy_z_range: tuple[float, float] = (0.05, 0.17),
-        reset_noise_scale: float = 0.02,
+        reset_noise_scale: float = 0.03,
         upright_threshold: float = 0.5,
         **kwargs,
     ):
@@ -141,6 +146,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
             turning_cost_weight,
             y_drift_cost_weight,
             asymmetry_cost_weight,
+            heading_cost_weight,
             main_body,
             terminate_when_unhealthy,
             healthy_z_range,
@@ -156,6 +162,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
         self.y_drift_cost_weight = y_drift_cost_weight
         self._healthy_reward_weight = healthy_reward_weight
         self.asymmetry_cost_weight = asymmetry_cost_weight
+        self.heading_cost_weight = heading_cost_weight
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
         self._upright_threshold = upright_threshold
@@ -253,6 +260,20 @@ on velocities, so each episode starts slightly varied around the standing pose.
 
         cost = np.sum(front_diff**2) + np.sum(rear_diff**2)
         return self.asymmetry_cost_weight * cost
+    
+    @property
+    def heading_cost(self):
+        # penalize the body pointing away from +x (the cause of drift: walking at an angle).
+        # rotate the body's forward axis [1,0,0] into the world by the base quaternion,
+        # then reward its x-component being ~1 (nosed straight down +x).
+        # penalize (1 - forward_x): 0 when facing +x, grows to 2 when facing -x.
+        # note: yaw ANGLE (deviation from +x), NOT yaw rate — rate locks in bad headings,
+        # angle creates a restoring pull toward facing forward (allows correction).
+        quat = self.data.qpos[3:7]
+        forward = np.zeros(3)
+        mujoco.mju_rotVecQuat(forward, np.array([1.0, 0.0, 0.0]), quat)
+        deviation = 1.0 - forward[0]      # 0 when facing +x, up to 2 when facing -x
+        return self.heading_cost_weight * deviation
 
     @property
     def is_healthy(self):
@@ -305,7 +326,8 @@ on velocities, so each episode starts slightly varied around the standing pose.
         stability_cost = self.stability_cost
         y_drift_cost = self.y_drift_cost
         asymmetry_cost = self.asymmetry_cost
-        costs = smoothness_cost + turning_cost + stability_cost + y_drift_cost + asymmetry_cost
+        heading_cost = self.heading_cost
+        costs = smoothness_cost + turning_cost + stability_cost + y_drift_cost + asymmetry_cost + heading_cost
 
         reward = rewards - costs
 
@@ -316,7 +338,8 @@ on velocities, so each episode starts slightly varied around the standing pose.
             "reward_stability": -stability_cost,
             "reward_turning": -turning_cost,
             "reward_y_drift": -y_drift_cost,
-            "reward_asymmetry": -asymmetry_cost
+            "reward_asymmetry": -asymmetry_cost,
+            "reward_heading": -heading_cost,
         }
 
         return reward, reward_info
