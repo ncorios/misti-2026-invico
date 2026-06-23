@@ -53,7 +53,7 @@ time) but never in the observation.
 
 ## Rewards
 total = forward_reward + healthy_reward - smoothness_cost - turning_cost
-        - stability_cost - y_drift_cost - heading_cost
+        - stability_cost - y_drift_cost - heading_cost - energy_cost
 
 - forward_reward: w_forward * base_x_velocity. Rewards forward (+x) progress.
 - healthy_reward: w_healthy per timestep while healthy (upright and at height).
@@ -66,10 +66,15 @@ total = forward_reward + healthy_reward - smoothness_cost - turning_cost
 - y_drift_cost: w_y_drift * |y_position|. Restoring force toward the x-axis — penalizes
   being off-center in y, so RETURNING to center reduces cost (rewards correcting a
   drifted heading rather than punishing the turn). The straightness lever.
-- heading_cost: w_heading * (1 - forward_x). Penalizes the body pointing away from +x.
-  Rotates the body's forward axis [1,0,0] into the world frame; rewards its x-component
-  being ~1 (nosed straight down +x). Yaw ANGLE (not rate) — creates a restoring pull
-  toward facing forward rather than locking in a bad heading.
+- heading_cost: goal-conditioned heading penalty. Penalizes deviation from a DESIRED heading
+  that is forward but tilted toward y=0 in proportion to off-center distance. Correcting
+  toward the centerline costs ~0; turning away or over-shooting costs. Privileged (uses y
+  position in the reward, not the obs).
+- energy_cost: w_energy * sum(|joint_torque * joint_velocity|). Mechanical-power penalty
+  that discourages a thrashing / leg-dragging gait and serves as the in-sim cost-of-transport
+  proxy. Privileged (reward-only). Absolute value is non-physical (placeholder forcerange);
+  it's a relative penalty. Weight kept small — energy is minimized by standing still, so too
+  high reintroduces the freeze-in-place exploit.
 
 Weights are tuned for this robot's scale (base height ~0.108 m, gram-scale links);
 Ant's default weights do not transfer and are not used.
@@ -120,15 +125,18 @@ on velocities, so each episode starts slightly varied around the standing pose.
         frame_skip: int = 5,
         default_camera_config: dict[str, float | int] = DEFAULT_CAMERA_CONFIG,
         forward_reward_weight: float = 5.0,
-        smoothness_cost_weight: float = .02,
+        smoothness_cost_weight: float = .01,
         healthy_reward_weight: float = 2,
         stability_reward_weight: float = 0,
         turning_cost_weight: float = 0,
-        y_drift_cost_weight: float = 0.04,
+        y_drift_cost_weight: float = 0.1,
         asymmetry_cost_weight: float = 0,
         heading_cost_weight: float = 0.3,
-        heading_lin_weight: float = 0.01,
-        heading_quad_weight: float = 0.01,
+        heading_lin_weight: float = 0.1,
+        heading_quad_weight: float = 0.005,
+        heading_center_gain: float = 1.0,
+        heading_max_correction: float = 0.5,
+        energy_cost_weight: float = 0.005,
         main_body: int | str = "base",
         terminate_when_unhealthy: bool = True,
         healthy_z_range: tuple[float, float] = (0.05, 0.17),
@@ -151,6 +159,9 @@ on velocities, so each episode starts slightly varied around the standing pose.
             heading_cost_weight,
             heading_lin_weight,
             heading_quad_weight,
+            heading_center_gain,
+            heading_max_correction,
+            energy_cost_weight,
             main_body,
             terminate_when_unhealthy,
             healthy_z_range,
@@ -169,6 +180,9 @@ on velocities, so each episode starts slightly varied around the standing pose.
         self.asymmetry_cost_weight = asymmetry_cost_weight
         self.heading_lin_weight = heading_lin_weight
         self.heading_quad_weight = heading_quad_weight
+        self.heading_center_gain = heading_center_gain
+        self.heading_max_correction = heading_max_correction
+        self.energy_cost_weight = energy_cost_weight
         self._terminate_when_unhealthy = terminate_when_unhealthy
         self._healthy_z_range = healthy_z_range
         self._upright_threshold = upright_threshold
@@ -266,58 +280,100 @@ on velocities, so each episode starts slightly varied around the standing pose.
 
         cost = np.sum(front_diff**2) + np.sum(rear_diff**2)
         return self.asymmetry_cost_weight * cost
-    
-  
+
     @property
-    def heading_cost(self):
-        # penalize the body pointing away from +x (the cause of drift: walking at an angle).
-        # rotate the body's forward axis [1,0,0] into the world by the base quaternion,
-        # then reward its x-component being ~1 (nosed straight down +x).
-        # penalize (1 - forward_x): 0 when facing +x, grows to 2 when facing -x.
-        # note: yaw ANGLE (deviation from +x), NOT yaw rate — rate locks in bad headings,
-        # angle creates a restoring pull toward facing forward (allows correction).
+    def energy_cost(self):
+        # Mechanical-power penalty: sum |joint_torque * joint_velocity| over the 12 joints.
+        # Discourages a thrashing, leg-dragging gait (high torque against the floor) and
+        # is the in-sim proxy for COST OF TRANSPORT, one of the comparison-study metrics.
+        #
+        # PRIVILEGED (reward-only, never in obs): actuator_force and qvel are sim state the
+        # real robot can't read cleanly. Layout: qvel[0:6] = free-joint base DOF, qvel[6:18]
+        # = the 12 joint velocities (matches actuator_force order).
+        #
+        # NOTE: torque magnitudes ride the XML's placeholder forcerange (~50x too high vs the
+        # 4.5 kg*cm servo spec), so the ABSOLUTE energy number is not physical — it's a
+        # RELATIVE penalty, valid for in-sim comparison, not a real-watts figure. Weight is
+        # deliberately small: energy is minimized by standing still, so too high a weight
+        # reintroduces the freeze-in-place exploit (forward reward must stay dominant).
+        torque = self.data.actuator_force
+        joint_vel = self.data.qvel[6:18]
+        power = np.sum(np.abs(torque * joint_vel))
+        return self.energy_cost_weight * power
+
+    @property
+    def heading_cost_inactive_1(self):
+        # OLD cosine form: penalize (1 - forward_x). Kept for reference.
+        # Flaw: gradient ~sin(yaw) vanishes near zero, so small headings felt no pressure
+        # and drift stalled. Replaced first by the stacked form, then by goal-conditioned.
         quat = self.data.qpos[3:7]
         forward = np.zeros(3)
         mujoco.mju_rotVecQuat(forward, np.array([1.0, 0.0, 0.0]), quat)
-        deviation = 1.0 - forward[0]      # 0 when facing +x, up to 2 when facing -x
+        deviation = 1.0 - forward[0]
         return self.heading_cost_weight * deviation
 
     @property
-    def heading_cost_inactive(self):
-        """
-        Penalize heading deviation from +x — the CAUSE of drift (walking at an angle),
-        not the position symptom that y_drift chases.
-
-        yaw = atan2(forward_y, forward_x), where forward = body [1,0,0] rotated to world.
-        yaw=0 facing +x (zero cost), +/-pi facing -x. yaw ANGLE not rate: rate locks in
-        bad headings (the turning_cost mistake); angle-from-+x creates a restoring pull
-        that allows correction. Verify cost ~0 at stand pose.
-
-        STACKED (two regimes, separate weights) — supersedes the old single (1 - cos(yaw))
-        form. The old cosine cost had a gradient ~sin(yaw) that VANISHES near zero, so small
-        headings felt almost no pressure and drift stalled around ~1m. This version fixes
-        that with two terms:
-        - heading_lin_weight * |yaw|   : constant-magnitude gradient, so it keeps pulling
-                                        even at tiny errors → drives residual drift toward
-                                        zero (the part the old cos form couldn't do).
-        - heading_quad_weight * yaw**2 : gradient grows with the error, so it yanks back
-                                        hard on large strays ("leaves when far").
-
-        WEIGHT WARNING (learned the hard way): the small headings that cause ~1m drift are
-        only a few degrees, so making them costly needs a large coefficient — which then
-        DOMINATES at the larger angles seen during exploration, and the policy responds by
-        freezing in place (forward progress collapses; a 16m walker dropped to <1m). Keep
-        the combined heading cost a small fraction (~<=5-10%) of forward_reward (~5/step) at
-        the angles you actually see, and watch survival_rate. Strong straightness fights a
-        good forward gait; this term tightens drift only modestly before it breaks walking.
-        """
+    def heading_cost_inactive_2(self):
+        # OLD stacked |yaw|+yaw**2 form. Kept for reference.
+        # Better than cosine (non-vanishing gradient near zero) but still penalizes ANY
+        # deviation from +x — including corrective turns back toward the centerline.
+        # That's the same flaw as turning_cost: it can't allow corrections.
+        # Replaced by the goal-conditioned heading_cost below.
+        #
+        # heading_lin_weight * |yaw|   : steady pull even at tiny errors
+        # heading_quad_weight * yaw**2 : escalating pull for large strays
+        #
+        # WEIGHT WARNING: over-weighting caused v23 to freeze in place (16m→<1m).
         quat = self.data.qpos[3:7]
         forward = np.zeros(3)
         mujoco.mju_rotVecQuat(forward, np.array([1.0, 0.0, 0.0]), quat)
-        yaw = np.arctan2(forward[1], forward[0])   # signed heading error from +x
-        # |yaw|: steady pull even at small errors (keeps it tight near zero)
-        # yaw**2: escalating pull, yanks back hard when far (fixes "leaves when far")
+        yaw = np.arctan2(forward[1], forward[0])
         return self.heading_lin_weight * abs(yaw) + self.heading_quad_weight * yaw**2
+
+    @property
+    def heading_cost(self):
+        """
+        Goal-conditioned heading cost: penalizes deviation from a DESIRED heading that is
+        forward but tilted toward the y=0 centerline proportional to off-center distance.
+
+        WHY GOAL-CONDITIONED: both prior forms (cosine, stacked |yaw|+yaw²) penalized any
+        deviation from a fixed +x heading — including corrective turns back toward center.
+        That is structurally the same flaw as turning_cost (which penalized any rotation,
+        not bad rotations). When the robot has drifted +y and turns left to correct, a
+        fixed-+x cost charges it for that turn. Here the desired heading is already aimed
+        toward center, so the corrective turn costs ~0. Only turning AWAY from center or
+        overshooting is penalized.
+
+        DESIRED HEADING:
+          y = qpos[1]  (signed off-center; privileged reward-only, not in obs)
+          desired_yaw = -clip(heading_center_gain * y, -heading_max_correction, +heading_max_correction)
+          Drifted +y → desired heading is negative-yaw (aimed toward -y, i.e. back toward 0).
+          Clip prevents the robot ever being asked for a perpendicular dash to the line,
+          which would overshoot and oscillate.
+
+        KNOBS:
+          heading_center_gain    — aggressiveness toward center per meter of y drift.
+                                   1.0 = 1 rad/m (~57 deg/m). Higher tightens, risks oscillation.
+          heading_max_correction — max allowed desired_yaw (rad). 0.5 rad ~29 deg.
+          heading_cost_weight    — overall strength. Keep it a small fraction of forward_reward
+                                   (~5/step); v23 showed over-weighting freezes the gait.
+
+        OVERLAP WITH y_drift: both pull to y=0. Consider y_drift_weight=0 when testing this
+        so they don't fight; they address the same problem from different angles (heading vs
+        position). If both are on, they stack — watch for the freeze-in-place exploit.
+
+        VERIFY: stand pose (y=0, facing +x) → desired_yaw=0, yaw=0, err=0, cost~0.
+        """
+        y = self.data.qpos[1]
+        desired_yaw = -np.clip(self.heading_center_gain * y,
+                               -self.heading_max_correction,
+                                self.heading_max_correction)
+        quat = self.data.qpos[3:7]
+        forward = np.zeros(3)
+        mujoco.mju_rotVecQuat(forward, np.array([1., 0., 0.]), quat)
+        yaw = np.arctan2(forward[1], forward[0])
+        err = yaw - desired_yaw
+        return self.heading_cost_weight * err**2
 
     @property
     def is_healthy(self):
@@ -371,7 +427,8 @@ on velocities, so each episode starts slightly varied around the standing pose.
         y_drift_cost = self.y_drift_cost
         asymmetry_cost = self.asymmetry_cost
         heading_cost = self.heading_cost
-        costs = smoothness_cost + turning_cost + stability_cost + y_drift_cost + asymmetry_cost + heading_cost
+        energy_cost = self.energy_cost
+        costs = smoothness_cost + turning_cost + stability_cost + y_drift_cost + asymmetry_cost + heading_cost + energy_cost
 
         reward = rewards - costs
 
@@ -384,6 +441,7 @@ on velocities, so each episode starts slightly varied around the standing pose.
             "reward_y_drift": -y_drift_cost,
             "reward_asymmetry": -asymmetry_cost,
             "reward_heading": -heading_cost,
+            "reward_energy": -energy_cost,
         }
 
         return reward, reward_info
