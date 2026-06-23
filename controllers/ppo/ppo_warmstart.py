@@ -25,6 +25,7 @@ class RewardTermsCallback(BaseCallback):
         self._ep_reward_y_drift = []
         self._ep_reward_asymmetry = []
         self._ep_reward_heading = []
+        self._ep_reward_energy = []
 
     def _on_step(self) -> bool:
         for info in self.locals["infos"]:
@@ -37,6 +38,7 @@ class RewardTermsCallback(BaseCallback):
                 self._ep_reward_y_drift.append(info["reward_y_drift"])
                 self._ep_reward_asymmetry.append(info["reward_asymmetry"])
                 self._ep_reward_heading.append(info["reward_heading"])
+                self._ep_reward_energy.append(info["reward_energy"])
         return True
 
     def _on_rollout_end(self) -> None:
@@ -49,6 +51,7 @@ class RewardTermsCallback(BaseCallback):
             self.logger.record("reward/y_drift",    np.mean(self._ep_reward_y_drift))
             self.logger.record("reward/asymmetry",  np.mean(self._ep_reward_asymmetry))
             self.logger.record("reward/heading",    np.mean(self._ep_reward_heading))
+            self.logger.record("reward/energy",     np.mean(self._ep_reward_energy))
             self._ep_reward_forward.clear()
             self._ep_reward_survive.clear()
             self._ep_reward_smoothness.clear()
@@ -57,6 +60,7 @@ class RewardTermsCallback(BaseCallback):
             self._ep_reward_y_drift.clear()
             self._ep_reward_asymmetry.clear()
             self._ep_reward_heading.clear()
+            self._ep_reward_energy.clear()
 
 
 def make_env():
@@ -74,6 +78,11 @@ def warmstart(from_version, to_version, total_timesteps=2_000_000, n_envs=None):
 
     load_path = os.path.join(MODEL_DIR, f"dog_ppo_v{from_version}")
     model = PPO.load(load_path, env=vec_env)
+    model.learning_rate = 3e-5
+    model.lr_schedule = lambda _: 3e-5  # SB3 uses the schedule internally; set both
+    model.ent_coef = 0.0
+    model.target_kl = 0.0175
+    
 
     
     model.set_logger(configure(os.path.join(HERE, "tb_logs", f"v{to_version}"), ["stdout", "tensorboard"]))
@@ -105,4 +114,4 @@ if __name__ == "__main__":
     # run with python3 controllers/ppo/ppo_warmstart.py _ _
     # first num version from, second num is to
   
-    # python3 controllers/ppo/ppo_warmstart.py --steps 25000000 --envs 8 20 0
+    # python3 controllers/ppo/ppo_warmstart.py --steps 10000000 --envs 8 28 29

@@ -70,6 +70,40 @@ that layer yet.
   weights, circling. Planned ablation: does stability/turning help or hurt vs v9's
   simpler reward — early data suggests simpler may win; report honestly.
 
+#### CURRENT STATE (live — keep updated each working session)
+_Last updated: 2026-06-22._
+- **Best model: v24** (15.30m det / 0.90 survival; 15.56m stoch / 0.90). Warmstarted from v0
+  with the new energy penalty on — a clean win on every axis (beats v0 14.30/0.70 and the
+  lost v21). Energy term cleaned the gait AND improved distance + survival. v0 is the
+  prior best / fallback; v21 was best-ever (~15.5–16m, 100%) but its .zip was deleted. v23
+  COLLAPSED to 0.83m (stood still) from over-escalated heading cost — heading is powerful but
+  freezes walking if overweighted.
+- **Two open problems, distinct fixes:** (1) drift/straightness — over ~15m, y-spread ±1–2m,
+  deterministic episodes fan out BOTH directions from reset noise → policy isn't closing the
+  loop on heading (it could; orientation quat is in obs). (2) gait quality — v24 now GALLOPS
+  (pitch oscillation: tilt modest ~11° mean, but pitch RATE large ~2.7 rad/s). Energy term
+  fixed dragging but pushed toward a ballistic bound.
+- **Decisions (2026-06-22):**
+  - Gait efficiency via ENERGY penalty (chosen over memory-based phase-symmetry, which bakes
+    in a pace-like 2-beat gait not a natural trot — steer to phase-clock-in-obs if phasing
+    ever needed). DONE → v24.
+  - Anti-gallop = ANGLE-based leveling term, NOT a pitch-RATE cost. A rate cost repeats the
+    turning_cost mistake (punishes corrective pitching, can't allow recovery). Use a lin+quad
+    PITCH-ANGLE cost (reuse the heading lin+quad trick to bite near zero). Documented as a
+    FUTURE implementation in ppo_eval/v24/v24-notes.md; not yet coded.
+- **In progress:** user tuning y_drift + heading weights for straightness. NOTE: heading is
+  the stronger lever than y_drift (policy can OBSERVE heading via quat but NOT y — y is
+  privileged/excluded, so y_drift can't drive active closed-loop correction, only weak
+  open-loop selection pressure). Heading = cause, y_drift = symptom. y_drift's unique value:
+  catches "crabbing" (facing +x but sliding sideways) that heading misses.
+- **Caveat to keep honest:** cm-level drift over 15m is not reachable by reward shaping
+  (~1° heading error ≈ 0.26m drift over 15m); absolute-y can never be closed-loop-corrected
+  since y-position is (correctly) excluded from obs as privileged — only heading is. Realistic
+  target ~0.2–0.5m. Energy magnitude is non-physical (placeholder forcerange ~50× too high) —
+  a RELATIVE penalty, fine for in-sim comparison.
+- **Eval gap (next instrumentation):** ppo_log.py logs only x-distance/survival — no y-drift,
+  heading error, or cost-of-transport yet. Add these to measure the two problems directly.
+
 ### HONEST LIMITATIONS (do NOT overclaim)
 - XML dynamics (masses, inertias, kp, forcerange) are approximate XGO debug placeholders,
   NOT measured DOGZILLA values — fine for in-sim comparison, need system-ID for hardware.

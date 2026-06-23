@@ -23,6 +23,7 @@ class RewardTermsCallback(BaseCallback):
         self._ep_reward_y_drift = []
         self._ep_reward_asymmetry = []
         self._ep_reward_heading = []
+        self._ep_reward_energy = []
 
     def _on_step(self) -> bool:
         for info in self.locals["infos"]:
@@ -35,6 +36,7 @@ class RewardTermsCallback(BaseCallback):
                 self._ep_reward_y_drift.append(info["reward_y_drift"])
                 self._ep_reward_asymmetry.append(info["reward_asymmetry"])
                 self._ep_reward_heading.append(info["reward_heading"])
+                self._ep_reward_energy.append(info["reward_energy"])
         return True
 
     def _on_rollout_end(self) -> None:
@@ -47,6 +49,7 @@ class RewardTermsCallback(BaseCallback):
             self.logger.record("reward/y_drift",    np.mean(self._ep_reward_y_drift))
             self.logger.record("reward/asymmetry",  np.mean(self._ep_reward_asymmetry))
             self.logger.record("reward/heading",    np.mean(self._ep_reward_heading))
+            self.logger.record("reward/energy",     np.mean(self._ep_reward_energy))
             self._ep_reward_forward.clear()
             self._ep_reward_survive.clear()
             self._ep_reward_smoothness.clear()
@@ -55,7 +58,8 @@ class RewardTermsCallback(BaseCallback):
             self._ep_reward_y_drift.clear()
             self._ep_reward_asymmetry.clear()
             self._ep_reward_heading.clear()
-        
+            self._ep_reward_energy.clear()
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(HERE, "models")
 
@@ -101,4 +105,4 @@ if __name__ == "__main__":
     # SubprocVecEnv requires the __main__ guard — this is it
     train(args.version, total_timesteps=args.steps, n_envs=args.envs)
 
-#copy and paste to run, add version, steps, envs at end: python3 controllers/ppo/ppo_training.py 23  --steps 1000000 --envs 8
+#copy and paste to run, add version, steps, envs at end: python3 controllers/ppo/ppo_training.py 24  --steps 1000000 --envs 8
