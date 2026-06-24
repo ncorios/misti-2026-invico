@@ -94,7 +94,7 @@ that layer yet.
   simpler reward — early data suggests simpler may win; report honestly.
 
 #### CURRENT STATE (live — keep updated each working session)
-_Last updated: 2026-06-22._
+_Last updated: 2026-06-24._
 - **Best model: v24** (15.30m det / 0.90 survival; 15.56m stoch / 0.90). Warmstarted from v0
   with the new energy penalty on — a clean win on every axis (beats v0 14.30/0.70 and the
   lost v21). Energy term cleaned the gait AND improved distance + survival. v0 is the
@@ -124,11 +124,32 @@ _Last updated: 2026-06-22._
   since y-position is (correctly) excluded from obs as privileged — only heading is. Realistic
   target ~0.2–0.5m. Energy magnitude is non-physical (placeholder forcerange ~50× too high) —
   a RELATIVE penalty, fine for in-sim comparison.
-- **Eval gap (next instrumentation):** ppo_log.py logs only x-distance/survival — no y-drift,
-  heading error, or cost-of-transport yet. Add these to measure the two problems directly.
+- **Eval instrumentation (DONE 2026-06-24):** ppo_log.py now logs per-run y-drift (final_y,
+  mean|y|), heading bias + mean|yaw| (deg), AND overlays a single deterministic, NO-RESET-NOISE
+  run on the trajectory plot to isolate the policy's own heading from reset spread. summary.csv
+  upserts by version. (Cost-of-transport still TODO.)
+
+### TO EXPLORE BEFORE AMP (parked — low priority right now)
+- **Suspected bad XML masses/inertias.** Strong belief the joint/link masses + inertias in the
+  XML are wrong (XGO debug-placeholder comments are the evidence; it's not our authored XML —
+  to be edited later). This is the leading hypothesis for any systematic gait weirdness
+  (gallop, heading lean) and must be ruled out before blaming reward shaping or moving to AMP.
+  Already in HONEST LIMITATIONS, escalated here as an action item.
+- **Heading bias vs noise — UNRESOLVED.** The no-reset-noise eval (2026-06-24) showed most
+  capable policies' single deterministic run curving the SAME sign (~−8° to −17° yaw), which
+  *looked* like a structural bias (→ would point back at the XML). BUT user's read: the drift
+  is essentially NOISE-DRIVEN and random, not structural — v41 in particular shows basically no
+  drift. n=1 per model on the no-noise run is thin evidence; multi-episode deterministic still
+  fans out BOTH directions from reset noise (consistent with the noise-driven view). Don't treat
+  the consistent-sign no-noise bias as established. Resolve (more no-noise samples / seeds) only
+  if drift actually matters for the writeup; otherwise leave it.
+- Next phase intent: AMP (adversarial motion priors) for gait quality, superseding hand-shaped
+  reward terms.
 
 ### HONEST LIMITATIONS (do NOT overclaim)
 - XML dynamics (masses, inertias, kp, forcerange) are approximate XGO debug placeholders,
   NOT measured DOGZILLA values — fine for in-sim comparison, need system-ID for hardware.
+  STRONGER: joint/link masses + inertias are likely outright wrong (debug-comment evidence,
+  inherited XML) — suspect this before reward shaping for any gait pathology. See TO EXPLORE.
 - Sim-to-real not yet attempted; if done, report the gap honestly.
 - The comparison is the contribution; "RL solved locomotion from scratch" is NOT the claim.
