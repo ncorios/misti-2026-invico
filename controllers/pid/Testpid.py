@@ -41,7 +41,7 @@ pid = PID(KP, KI, KD, dt)
 pid.update_thetas(data.qpos[7:19].copy())
 
 # ── Gait parameters ───────────────────────────────────────────────
-gait_frequency       = .1
+gait_frequency       = 1.0
 swing_amplitude      = 0.18
 stance_amplitude     = 0.09
 knee_amplitude       = 0.22
@@ -71,12 +71,12 @@ with mujoco.viewer.launch_passive(model, data, key_callback=_key_callback) as vi
     x_start = data.qpos[0]
 
     while viewer.is_running():
+        step_start = time.time()          # wall-clock anchor for real-time pacing
         if not Running:
             mujoco.mj_forward(model, data)
             viewer.sync()
-            time.sleep(0.001)
+            time.sleep(0.01)              # idle + debounce the pause key while paused
             continue
-        time.sleep(.002)
         x_current = data.qpos[0]
         y_current = data.qpos[1]
         distance_travelled = abs(x_current - x_start)
@@ -131,3 +131,9 @@ with mujoco.viewer.launch_passive(model, data, key_callback=_key_callback) as vi
 
         print(data.qpos[2])
         viewer.sync()
+
+        # sync viewer to wall clock: one control cycle advances 10*dt of sim time.
+        # The leftover sleep also debounces the pause key (loop never busy-spins).
+        sleep_t = (10 * dt) - (time.time() - step_start)
+        if sleep_t > 0:
+            time.sleep(sleep_t)

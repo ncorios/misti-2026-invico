@@ -77,12 +77,17 @@ def warmstart(from_version, to_version, total_timesteps=2_000_000, n_envs=None):
     vec_env = make_vec_env(make_env, n_envs=n_envs, vec_env_cls=SubprocVecEnv)
 
     load_path = os.path.join(MODEL_DIR, f"dog_ppo_v{from_version}")
-    model = PPO.load(load_path, env=vec_env)
-    model.learning_rate = 3e-5
-    model.lr_schedule = lambda _: 3e-5  # SB3 uses the schedule internally; set both
-    model.ent_coef = 0.0
-    model.target_kl = 0.0175
-    
+    # Define your tuning hyperparameters properly
+    custom_hyperparams = {
+        "learning_rate": 2e-4,  # Lowered for fine-tuning
+        "target_kl": 0.03,      # Tighter ceiling to protect the walking gait
+        "batch_size": 2048,     # Keeps gradients stable
+        "ent_coef": 0.005       # Keeps exploration alive
+    }
+
+    # Load the model with the new settings applied automatically
+    model = PPO.load(load_path, env=vec_env, custom_objects=custom_hyperparams)
+
 
     
     model.set_logger(configure(os.path.join(HERE, "tb_logs", f"v{to_version}"), ["stdout", "tensorboard"]))
@@ -114,4 +119,4 @@ if __name__ == "__main__":
     # run with python3 controllers/ppo/ppo_warmstart.py _ _
     # first num version from, second num is to
   
-    # python3 controllers/ppo/ppo_warmstart.py --steps 10000000 --envs 8 28 29
+    # python3 controllers/ppo/ppo_warmstart.py --steps 10000000 --envs 8 33 41
