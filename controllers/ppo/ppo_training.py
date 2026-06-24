@@ -85,6 +85,10 @@ def train(version, total_timesteps=1_000_000, n_envs=None):
         batch_size=256,
         verbose=1,
     )
+    model.learning_rate = 2e-4
+    model.lr_schedule = lambda _: 2e-4 # SB3 uses the schedule internally; set both
+    model.ent_coef = 0.001
+    
     model.set_logger(configure(os.path.join(HERE, "tb_logs", f"v{version}"), ["stdout", "tensorboard"]))
     callback = RewardTermsCallback()
     model.learn(total_timesteps=total_timesteps, callback=callback)
@@ -105,4 +109,4 @@ if __name__ == "__main__":
     # SubprocVecEnv requires the __main__ guard — this is it
     train(args.version, total_timesteps=args.steps, n_envs=args.envs)
 
-#copy and paste to run, add version, steps, envs at end: python3 controllers/ppo/ppo_training.py 24  --steps 1000000 --envs 8
+#copy and paste to run, add version, steps, envs at end: python3 controllers/ppo/ppo_training.py 35 --steps 5000000 --envs 8

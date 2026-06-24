@@ -46,6 +46,29 @@ that layer yet.
   optimizes reward; they don't share an internal score. Deliberate methodological choice.
 - Fall rate only discriminates under perturbation, not flat ground.
 
+### PID TRACK — FINDING (for writeup; honest framing)
+- The PID controller is solid: tracks the commanded joint trajectory to ~14 mrad RMS,
+  stays upright, stable across gait frequencies. The controller does its job.
+- BUT the reference it's handed is NOT a locomotion gait. It's an open-loop kinematic
+  oscillator (CPG-style sinusoids, diagonal trot pairing) with no notion of ground contact
+  or reaction force. Tracking joint angles ≠ propulsion. Result: the dog barely translates
+  (~0.008 m/s, ~0.1 m over 12 s at the best frequency).
+- Measured failure mode (freq=1.0, headless diag): feet only clear ~2–4 cm (no real swing
+  phase), so they stay on the ground and SLIDE — the in-stance x-slide ≈ the full foot
+  x-stroke (e.g. LF 64 of 65 mm). Forward and backward scuffs nearly cancel: body oscillates
+  ±7 cm but nets only ~5 cm in 6 s. A properly planted foot should stay fixed in the world
+  while the hip retracts to drive the body forward; here it scuffs in place.
+- Frequency is only cadence, not stroke geometry: cranking it scuffs faster, doesn't travel
+  farther. 2 Hz was actually WORSE than 1 Hz in the sweep (feet can't complete the stroke).
+- WHY it matters for the comparison: this is the clean illustration of the thesis. A good
+  controller + a hand-authored reference still doesn't walk, because it has no model of
+  contact/foot-placement. That's exactly what MPC supplies explicitly (contact schedule +
+  foot trajectories) and PPO learns implicitly from reward. PID's honest contribution is the
+  tracking baseline, NOT locomotion — don't claim the PID "walks."
+- Gap to close if we ever want PID to actually walk: a contact-aware gait generator
+  (guaranteed swing clearance + no-slip stance where planted-foot world velocity ≈ 0).
+  PI recommended this oscillator model; it's a reference-trajectory limitation, not a PID one.
+
 ### PPO TRACK (mine)
 - Custom MuJoCo Gym env from the Ant-v5 skeleton, redefined for the real robot.
 - Design decisions, each defensible:
