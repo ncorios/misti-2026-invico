@@ -48,3 +48,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     watch(args.version, deterministic=not args.stochastic)
 # run with mjpython controllers/ppo/ppo_watch.py <version>
+
+# mjpython controllers/ppo/ppo_watch.py 41
+
