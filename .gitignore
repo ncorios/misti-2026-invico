@@ -44,6 +44,10 @@ venv/
 # ignore old code
 old/
 
+# Claude Code project instructions (internal notes — keep out of the public repo)
+CLAUDE.md
+claude.md
+
 # MuJoCo runtime files
 MJDATA.TXT
 mjmodel.mjb
