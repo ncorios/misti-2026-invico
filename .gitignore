@@ -52,6 +52,9 @@ claude.md
 MJDATA.TXT
 mjmodel.mjb
 
+# SolidWorks / Office autosave-lock temp files
+~$*
+
 # macOS
 .DS_Store
 .AppleDouble
