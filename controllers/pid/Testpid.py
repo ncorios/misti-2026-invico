@@ -1,4 +1,4 @@
-import os, mujoco, mujoco.viewer, numpy as np, time, keyboard
+import os, mujoco, mujoco.viewer, numpy as np, time
 from pid import PID   # your existing PID class
 
 # ── Pausing ─────────────────────────────────────────────────────────────────────
