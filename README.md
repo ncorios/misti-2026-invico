@@ -34,7 +34,11 @@ reward. That contrast is the contribution, not a leaderboard win.
 
 ## Results
 
-**PPO (v41)** — deterministic rollouts, 100 episodes. Trajectory spread from reset noise:
+**PPO (v41) rollout** — learned position policy, deterministic episode in MuJoCo:
+
+![PPO v41 rollout](controllers/ppo/ppo_eval/v41/v41_rollout.gif)
+
+Trajectory spread across 100 deterministic episodes (reset-noise fan-out):
 
 ![PPO v41 trajectories (100 runs)](controllers/ppo/ppo_eval/v41/trajectory_100_runs_v41.png)
 
