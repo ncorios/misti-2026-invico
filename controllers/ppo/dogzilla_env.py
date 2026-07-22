@@ -53,7 +53,11 @@ time) but never in the observation.
 
 ## Rewards
 total = forward_reward + healthy_reward - smoothness_cost - turning_cost
-        - stability_cost - y_drift_cost - heading_cost - energy_cost
+        - stability_cost - y_drift_cost - asymmetry_cost - heading_cost - energy_cost
+
+Nine terms total. Six are active at default weights (forward, healthy, smoothness,
+y_drift, heading, energy); three are wired but default to weight 0 (stability, turning,
+asymmetry), kept for ablation/logging.
 
 - forward_reward: w_forward * base_x_velocity. Rewards forward (+x) progress.
 - healthy_reward: w_healthy per timestep while healthy (upright and at height).
@@ -66,6 +70,9 @@ total = forward_reward + healthy_reward - smoothness_cost - turning_cost
 - y_drift_cost: w_y_drift * |y_position|. Restoring force toward the x-axis — penalizes
   being off-center in y, so RETURNING to center reduces cost (rewards correcting a
   drifted heading rather than punishing the turn). The straightness lever.
+- asymmetry_cost: w_asymmetry * summed squared left/right joint mismatch (hips sign-flipped,
+  upper/lower direct). Penalizes a non-mirror-symmetric leg pose. Reads joint angles only
+  (all measurable). Inert at weight 0 by default (kept for logging/comparison).
 - heading_cost: goal-conditioned heading penalty. Penalizes deviation from a DESIRED heading
   that is forward but tilted toward y=0 in proportion to off-center distance. Correcting
   toward the centerline costs ~0; turning away or over-shooting costs. Privileged (uses y

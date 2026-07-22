@@ -6,43 +6,47 @@ Goal: implement and benchmark PID, MPC, and PPO on standard dog locomotion.
 ## Status
 | Controller | Status |
 |------------|--------|
-| PID        | Done — ~14 mrad RMSE avg across joints |
+| PID        | Done — ~16 mrad RMSE avg across joints |
 | MPC        | In progress |
 | PPO        | Implemented — v1 model trained, eval results in `controllers/ppo/ppo_eval/` |
 
 ## Directory
 
 ```
-misti-2026-invico/
+dogzilla-control/
 ├── controllers/
 │   ├── pid/
-│   │   ├── pid.py              # PID controller
-│   │   ├── log_pid_run.py      # run + log a PID episode
-│   │   ├── plot_pid_log.py     # plot logged run data
-│   │   ├── Testpid.py          # test harness
-│   │   └── controler-v1.xml    # MuJoCo model used for PID
+│   │   ├── pid.py              # PID controller class (P/I/D + anti-windup + feedforward)
+│   │   ├── Testpid.py          # run the PID gait in the MuJoCo viewer
+│   │   ├── log_pid_run.py      # run headless, log joint/desired/error arrays -> run_log.npz
+│   │   ├── plot_pid_log.py     # plot tracking + error from the logged run
+│   │   └── controler-v1.xml    # MuJoCo model for PID (torque / <motor> actuators)
 │   ├── mpc/
-│   │   └── goon.py             # MPC controller (in progress)
+│   │   └── mpc.py              # MPC controller — separate repo, not yet merged (stub)
 │   └── ppo/
-│       ├── dogzilla_env.py     # custom Gymnasium env (12-DOF XGO)
-│       ├── ppo_controller.py   # PPO controller (wraps trained policy)
-│       ├── ppo_training.py     # training script (SB3 PPO)
-│       ├── ppo_log.py          # logging utilities
-│       ├── assets/             # XGO mesh STLs + ppo_dog.xml
-│       ├── models/             # saved model weights (*.zip)
-│       └── ppo_eval/           # eval outputs: metrics.json, episode mp4s, summary.csv
+│       ├── dogzilla_env.py     # custom Gymnasium env (12-DOF DOGZILLA S2 / XGO)
+│       ├── ppo_training.py     # train PPO from scratch (SB3)
+│       ├── ppo_warmstart.py    # continue / fine-tune training from a saved version
+│       ├── ppo_watch.py        # watch a trained policy in the MuJoCo viewer
+│       ├── ppo_log.py          # dual-mode eval -> metrics.json, trajectory.png, video
+│       ├── ppo_controller.py   # wrap a trained policy as controller(command, obs) -> (12)
+│       ├── stand_test.py       # no-policy plant sanity check (holds the stand keyframe)
+│       ├── ppo-progress-log.md # per-version training + reward-shaping log
+│       ├── assets/             # ppo_dog.xml (position actuators) + XGO mesh STLs
+│       ├── models/             # saved model weights (*.zip, gitignored)
+│       ├── ppo_eval/           # eval outputs: metrics.json, trajectory.png, mp4, summary.csv
+│       └── tb_logs/            # TensorBoard training logs (gitignored)
 ├── envs/
 │   ├── Prueba2_19_03.xml       # shared MuJoCo scene
 │   ├── assets/XGO/             # XGO mesh STLs
-│   └── hardware.yaml           # physical robot spec
+│   ├── hardware.yaml           # physical robot spec (stub)
+│   └── chameleon/              # separate CAD deliverable — do not touch
+├── notes/                      # controller theory + MuJoCo reference notes
 ├── benchmark/
-│   └── fall_detection.py       # fall detection utility
-├── results/                    # PID run logs and plots
-├── perception/
-│   ├── vision.py               # vision stub (future LLM command layer)
-│   └── voice-control.py        # voice stub
-├── chameleon/                  # separate RL/deploy project — do not touch
-└── notes/                      # theory and MuJoCo reference notes
+│   └── benchmark.py            # task-level benchmark harness (pending MPC — stub)
+├── results/                    # PID run log (run_log.npz) + tracking/error plots
+├── requirements.txt
+└── README.md
 ```
 
 ## Controller interface

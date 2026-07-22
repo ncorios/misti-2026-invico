@@ -1,11 +1,10 @@
 """
-log_run.py — run the controller headless and save joint/desired/error arrays.
+log_pid_run.py — run the controller headless and save joint/desired/error arrays.
 
-Drop this in the same folder as Testpid.py. It reuses your PID class and the
-same gait + feedforward as Testpid (no viewer), then writes run_log.npz next
-to this file. Then run plot_log.py to visualise.
+Script reuses the PID class and the same gait + feedforward as Testpid (no viewer),
+then writes run_log.npz next to this file. Then run plot_pid_log.py to visualise.
 
-    python log_run.py
+    python log_pid_run.py
 """
 import os
 import numpy as np
@@ -13,7 +12,7 @@ import mujoco
 from pid import PID
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-XML  = os.path.abspath(os.path.join(HERE, "..", "plants", "controler-v1.xml"))
+XML  = os.path.join(HERE, "controler-v1.xml")
 OUT  = os.path.join(HERE, "run_log.npz")
 T_SIM = 12.0   # seconds to simulate
 

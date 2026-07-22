@@ -1,3 +1,23 @@
+"""
+ppo_log.py — evaluate a trained PPO policy and write its eval artifacts.
+
+Loads models/dog_ppo_v{version}.zip and runs a dual-mode evaluation over n_episodes:
+  - deterministic (deployment behavior) and stochastic (robustness) rollouts, reporting
+    distance, survival rate, and drift/heading metrics for each;
+  - one deterministic, no-reset-noise rollout to isolate the policy's own heading bias
+    from the spread introduced by reset noise.
+Outputs, all under ppo_eval/v{version}/:
+  - metrics.json          full stats for this version
+  - trajectory_v{n}.png   deterministic vs stochastic vs no-noise xy paths
+  - dog_ppo_v{n}*.mp4      one recorded deterministic episode (unless --no-video)
+and upserts one row (keyed by version) into ppo_eval/summary.csv.
+
+Distance/survival are the comparison metrics — NOT reward_mean, which is not comparable
+across reward-function versions.
+
+Run:
+    python controllers/ppo/ppo_log.py <version> [--episodes N] [--no-video]
+"""
 import os
 import csv
 import json

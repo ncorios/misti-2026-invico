@@ -1,3 +1,19 @@
+"""
+ppo_warmstart.py — continue training an existing PPO policy (fine-tune / warm start).
+
+Loads models/dog_ppo_v{from_version}.zip, applies fine-tuning hyperparameters (lower
+learning rate, tighter target_kl, larger batch, some entropy), and keeps training on
+fresh DogEnv rollouts without resetting the step counter, then saves the result to
+models/dog_ppo_v{to_version}.zip. This is the main iteration path once a policy walks:
+change a reward weight or hyperparameter in DogEnv, warm start from the last good
+version, and compare. Use ppo_training.py for a from-scratch run instead.
+
+Run:
+    python controllers/ppo/ppo_warmstart.py <from_version> <to_version> [--steps N] [--envs K]
+    e.g. python controllers/ppo/ppo_warmstart.py 33 41 --steps 10000000 --envs 8
+
+Then evaluate with:  python controllers/ppo/ppo_log.py <to_version>
+"""
 import os
 import numpy as np
 from stable_baselines3 import PPO
@@ -13,7 +29,8 @@ MODEL_DIR = os.path.join(HERE, "models")
 
 
 class RewardTermsCallback(BaseCallback):
-    """Logs all reward terms to TensorBoard."""
+    """Logs all nine reward terms (forward, survive, smoothness, stability, turning,
+    y_drift, asymmetry, heading, energy) to TensorBoard."""
 
     def __init__(self):
         super().__init__()

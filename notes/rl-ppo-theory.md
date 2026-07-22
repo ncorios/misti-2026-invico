@@ -8,7 +8,7 @@
 
 Run TensorBoard:
 ```bash
-cd ~/misti-2026-invico/controllers/ppo
+cd ~/dogzilla-control/controllers/ppo
 tensorboard --logdir tb_logs
 ```
 -

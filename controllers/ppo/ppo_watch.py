@@ -1,3 +1,17 @@
+"""
+ppo_watch.py — watch a trained PPO policy in the live MuJoCo viewer.
+
+Loads models/dog_ppo_v{version}.zip, runs it in a DogEnv, and renders each step in a
+passive viewer pinned to the XML "track" camera so it follows the dog. Resets and keeps
+going when the episode ends, printing distance and whether it fell each episode. This is
+the qualitative look at the gait; use ppo_log.py for the quantitative eval + recorded video.
+
+Deterministic by default; pass --stochastic to sample actions (robustness check).
+
+Run (macOS needs mjpython for the viewer):
+    mjpython controllers/ppo/ppo_watch.py <version> [--stochastic]
+    e.g. mjpython controllers/ppo/ppo_watch.py 41
+"""
 import os
 import time
 import argparse

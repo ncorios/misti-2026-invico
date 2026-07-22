@@ -1,3 +1,17 @@
+"""
+ppo_training.py — train a PPO policy on DogEnv from scratch.
+
+Builds a SubprocVecEnv of DogEnv instances (each wrapped in a 1000-step TimeLimit),
+trains an SB3 PPO "MlpPolicy", and saves the result to models/dog_ppo_v{version}.zip.
+The RewardTermsCallback logs each reward term to TensorBoard so training curves can be
+inspected per-term. Use ppo_warmstart.py to continue training from an existing version.
+
+Run:
+    python controllers/ppo/ppo_training.py <version> [--steps N] [--envs K]
+    e.g. python controllers/ppo/ppo_training.py 35 --steps 5000000 --envs 8
+
+Then evaluate with:  python controllers/ppo/ppo_log.py <version>
+"""
 import os
 import numpy as np
 from stable_baselines3 import PPO
@@ -11,7 +25,8 @@ from dogzilla_env import DogEnv
 
 
 class RewardTermsCallback(BaseCallback):
-    """Logs all five reward terms to TensorBoard."""
+    """Logs all nine reward terms (forward, survive, smoothness, stability, turning,
+    y_drift, asymmetry, heading, energy) to TensorBoard."""
 
     def __init__(self):
         super().__init__()
@@ -110,4 +125,5 @@ if __name__ == "__main__":
     # SubprocVecEnv requires the __main__ guard — this is it
     train(args.version, total_timesteps=args.steps, n_envs=args.envs)
 
-#copy and paste to run, add version, steps, envs at end: python3 controllers/ppo/ppo_training.py 35 --steps 5000000 --envs 8
+#copy and paste to run, add version name (be careful, will rewrite), steps, envs at end
+# ex: python3 controllers/ppo/ppo_training.py 35 --steps 5000000 --envs 8 
