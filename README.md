@@ -15,6 +15,13 @@ Goal: implement and benchmark PID, MPC, and PPO on standard dog locomotion.
 The MuJoCo plant models and their parameters were provided by a graduate student in the
 lab and, apart from the addition of sensors mimicing the onboard IMU, are unmodified. The contribution in this repo is the controllers themselves and the scripts used to evaluate them.
 
+**Contributions.** This was a two-person project:
+
+- **PPO** is Nico's — the learning environment, reward design, training, and evaluation.
+- **MPC** is James's — the control loop and logic (in a separate repo, not yet merged here).
+- **PID** was a collaboration — Nico wrote the PID class (`pid.py`) and the run/log/plot
+  scripts; James wrote the control loop and logic.
+
 ## Results
 
 **PPO (v41) rollout** — learned position policy, deterministic no-reset-noise episode in MuJoCo:
