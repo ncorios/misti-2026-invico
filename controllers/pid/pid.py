@@ -1,20 +1,23 @@
+"""
+    define a PID controller class with methods for P, I, D terms and a method to compute the control output given the current error.
+     torque(e,theta)= K_p*e + K_i*integrator + K_d*de/dt + torque_ff(theta)
+    where:
+     e = theta_d - theta (error)
+     integrator += e * dt (integral/accumulated error)
+     de/dt = rate of change of error, (D often also can be -K_d*dtheta/dt)
+     saturation array tracks saturation, needs an array of torque limits for motors to call calc torque
+
+     how to use
+     1. initialize with gains and initial theta
+     2. at each timestep, update theta and compute torque output using calc_torque
+     3. calc error based on desired theta_d and current theta, update integrator, compute P, I, D terms, and sum for total torque output
+     4. apply torque to the arm, get new theta from the arm dynamics, and repeat
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 
 class PID:
-    # define a PID controller class with methods for P, I, D terms and a method to compute the control output given the current error.
-    # torque(e,theta)= K_p*e + K_i*integrator + K_d*de/dt + torque_ff(theta)
-    # where:
-    # e = theta_d - theta (error)
-    # integrator += e * dt (integral/accumulated error)
-    # de/dt = rate of change of error, (D often also can be -K_d*dtheta/dt)
-    # saturation array tracks saturation, needs an array of torque limits for motors to call calc torque
-
-    # how to use
-    # 1. initialize with gains and initial theta
-    # 2. at each timestep, update theta and compute torque output using calc_torque
-    # 3. calc error based on desired theta_d and current theta, update integrator, compute P, I, D terms, and sum for total torque output
-    # 4. apply torque to the arm, get new theta from the arm dynamics, and repeat
 
     def __init__(self, kp, ki, kd, dt):
         self.kp = kp
