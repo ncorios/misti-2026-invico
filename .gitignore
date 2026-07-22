@@ -95,4 +95,4 @@ controllers/ppo/ppo_eval/v41/*
 !controllers/ppo/ppo_eval/v41/metrics.json
 !controllers/ppo/ppo_eval/v41/trajectory_100_runs_v41.png
 !controllers/ppo/ppo_eval/v41/trajectory_ten_runs_v41.png
-!controllers/ppo/ppo_eval/v41/v41_rollout.gif
+!controllers/ppo/ppo_eval/v41/v41_rollout_nonoise.gif
