@@ -1,0 +1,33 @@
+{
+  "version": "41",
+  "n_episodes": 10,
+  "deterministic": {
+    "distance_mean": 18.2938,
+    "distance_std": 0.4639,
+    "steps_mean": 1000.0,
+    "steps_std": 0.0,
+    "fell_count": 0,
+    "survival_rate": 1.0,
+    "reward_mean": 3747.9,
+    "abs_final_y_mean": 0.713,
+    "heading_bias_deg": -9.73
+  },
+  "stochastic": {
+    "distance_mean": 17.5929,
+    "distance_std": 0.457,
+    "steps_mean": 1000.0,
+    "steps_std": 0.0,
+    "fell_count": 0,
+    "survival_rate": 1.0,
+    "reward_mean": 3184.45,
+    "abs_final_y_mean": 0.936,
+    "heading_bias_deg": -6.52
+  },
+  "noiseless": {
+    "distance": 15.1226,
+    "final_y": -0.253,
+    "mean_abs_y": 0.144,
+    "heading_bias_deg": -11.27,
+    "mean_abs_yaw_deg": 11.71
+  }
+}
