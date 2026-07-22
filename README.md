@@ -13,8 +13,7 @@ Goal: implement and benchmark PID, MPC, and PPO on standard dog locomotion.
 ## Scope
 
 The MuJoCo plant models and their parameters were provided by a graduate student in the
-lab and are used unmodified. The contribution in this repo is the controllers themselves —
-the PID tracking controller, and the PPO learning environment, reward design, and training.
+lab and, apart from the addition of sensors mimicing the onboard IMU, are unmodified. The contribution in this repo is the controllers themselves and the scripts used to evaluate them.
 
 ## Results
 
