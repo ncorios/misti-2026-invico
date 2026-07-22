@@ -1,1 +1,5 @@
-# joint limits, sign conventions, offsets, latency (stub for sim 2 real later)
+# hardware.yaml — physical DOGZILLA S2 spec (PLANNED, not yet populated)
+#
+# Intended for sim-to-real: joint limits, sign conventions, servo offsets, and
+# command/readback latency measured from the physical robot. Empty until system-ID
+# is done; the sim uses the provided XML parameters in the meantime.
