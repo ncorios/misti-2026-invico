@@ -1,6 +1,6 @@
 # MISTI 2026 — Quadruped Controller Comparison
 
-Controller comparison study on a 12-DOF quadruped (XGO) in MuJoCo.
+Controller comparison study on a 12-DOF quadruped (XGO Dogzilla S2) in MuJoCo.
 Goal: implement and benchmark PID, MPC, and PPO on standard dog locomotion.
 
 ## Status
